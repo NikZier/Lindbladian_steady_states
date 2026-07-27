@@ -99,6 +99,25 @@ class MPS:
         return cls(tensors, local_dim)
 
     @classmethod
+    def pure_product_state(cls, kets: list[np.ndarray], local_dim: int = 2) -> "MPS":
+        """Build the bond-dimension-1 MPS for a product pure-state density matrix.
+
+        Given per-site kets |psi_n>, forms rho = (x)_n |psi_n><psi_n| and
+        represents it in the local-vec chain convention. Used to start TEBD
+        from a definite strong-symmetry eigenstate, e.g. all kets = |0> gives
+        rho = |0...0><0...0|, which stays in its strong-symmetry sector under
+        any parity-commuting Lindbladian.
+
+        Input:
+            kets: list of N vectors, each (local_dim,), the single-site pure
+                states (need not be normalized; each block is |psi><psi|).
+            local_dim: physical dimension of one site.
+        Output: an MPS with all bond dimensions equal to 1.
+        """
+        site_vectors = [vectorize.vec(np.outer(k, np.conj(k))) for k in kets]
+        return cls.product_state(site_vectors, local_dim)
+
+    @classmethod
     def maximally_mixed(cls, N: int, local_dim: int = 2) -> "MPS":
         """Build the bond-dimension-1 MPS representing rho = I (unnormalized
         maximally mixed state), a convenient generic initial guess for TEBD.
@@ -319,7 +338,8 @@ class MPS:
         for n in range(self.N):
             op = site_ops.get(n, I_d)
             E = np.einsum(
-                "ab,aic,ij,bjd->cd", E, self.tensors[n].conj(), op, other.tensors[n]
+                "ab,aic,ij,bjd->cd", E, self.tensors[n].conj(), op, other.tensors[n],
+                optimize=True,
             )
         return E[0, 0]
 
