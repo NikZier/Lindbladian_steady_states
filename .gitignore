@@ -1,0 +1,15 @@
+# Python bytecode
+__pycache__/
+*.py[cod]
+
+# Virtual environment (recreate with `uv sync`)
+.venv/
+
+# Tool caches
+.pytest_cache/
+.ruff_cache/
+
+# NOTE: experiments/results/ is deliberately NOT ignored. The pickles are the
+# study output, and results/_cache/ holds one pickle per completed TEBD run --
+# committing it means a fresh clone reuses ~4 h of finished compute instead of
+# recomputing it.
