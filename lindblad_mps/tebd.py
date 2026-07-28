@@ -206,6 +206,7 @@ def find_steady_state(
     recanonicalize_every: int = 10,
     initial_state: mps_module.MPS | None = None,
     blas_threads: int | None = 1,
+    stage_callback=None,
 ) -> tuple[mps_module.MPS, dict]:
     """Find the Lindbladian steady state of a finite chain via annealed TEBD.
 
@@ -225,6 +226,15 @@ def find_steady_state(
         recanonicalize_every: passed to evolve() at every stage.
         initial_state: starting MPS; defaults to MPS.maximally_mixed(N, d_site).
         blas_threads: BLAS/LAPACK thread cap for the whole run, see evolve().
+        stage_callback: optional callable(stage_index, dt, state) invoked after
+            each dt stage, for measuring an observable's drift across stages.
+            An observable still moving between the last two stages means the
+            run has not converged in time -- which the per-step 'overlap'
+            history cannot detect, since that shrinks with dt no matter how
+            far the state still is from the fixed point. The state passed in
+            is live, not a copy: read it, do not mutate it. Provided that
+            steps_per_dt is a multiple of recanonicalize_every, it is already
+            canonicalized and unit-normalized at this point.
     Output:
         (state, history): the final MPS (canonicalized and unit-normalized)
         and a dict of concatenated per-step diagnostic lists (see evolve()),
@@ -236,7 +246,7 @@ def find_steady_state(
 
     history = {"norm": [], "overlap": [], "discarded_weight": [], "dt": []}
     with blas.limit_threads(blas_threads):
-        for dt in dt_schedule:
+        for stage, dt in enumerate(dt_schedule):
             stage_history = evolve(
                 state,
                 H2_terms,
@@ -254,6 +264,8 @@ def find_steady_state(
             for key in ("norm", "overlap", "discarded_weight"):
                 history[key].extend(stage_history[key])
             history["dt"].extend([dt] * steps_per_dt)
+            if stage_callback is not None:
+                stage_callback(stage, dt, state)
 
         state.canonicalize(chi_max, cutoff)
         state.normalize()

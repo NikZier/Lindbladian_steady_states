@@ -96,9 +96,33 @@ CONV_N = 20
 CONV_INIT = "zero"
 CONV_SAMPLE = 0  # which L'' sample the chi sweep uses
 
-N_WORKERS = 6
+# 12, not 6: measured 2026-07-28 on the 6-core/12-thread desktop, SMT gives
+# 1.59x throughput at chi=32 (12 jobs in 183.7 s vs 6 in 145.7 s) and ~1.46x at
+# chi=128, where the larger SVDs press harder on cache. Memory is not a
+# constraint (~20 MB per worker). Drop back to 6 on a machine without SMT.
+N_WORKERS = 12
 
 CONVERGENCE_TOL = 1e-6  # 1 - |<rho(t)|rho(t+dt)>| below this counts as converged
+
+# 'converged' above is a weak test and is kept only for continuity with the
+# existing pickles: it measures the change over ONE Trotter step, which shrinks
+# with dt whether or not the state is near the fixed point, so a slowly-drifting
+# state passes it trivially. Measured case: the L''=0 'neel' control at chi=128
+# reports converged=True with 1-overlap = 6.7e-12 at N=20 while sitting at bond
+# dimension 56, though its exact steady state is the dark state at bond
+# dimension 1 -- the relaxation front had not finished crossing the chain.
+# STAGE_DRIFT_TOL tests the honest thing instead: the relative change in the
+# correlator between the last two dt stages.
+STAGE_DRIFT_TOL = 1e-2
+
+# R = Tr[rho A rho A]/Tr[rho^2] with A = X_i X_j Hermitian and unitary equals
+# Tr[(A rho A) rho], a trace of two positive semidefinite matrices, so R >= 0
+# for any physical rho. Truncation destroys positivity, and a negative R is a
+# direct measure of how much: it is the one error the pipeline can detect
+# without knowing the right answer. Recorded, never raised -- runs that are
+# merely truncation-limited are still worth keeping (the chi=128 L''=0 control
+# reaches -3.8e-06), and run_job would otherwise bank them as failures.
+POSITIVITY_TOL = 1e-12  # |negative R| above this is worth flagging
 
 RESULTS_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "results")
 CACHE_DIR = os.path.join(RESULTS_DIR, "_cache")  # one pickle per completed run
@@ -171,6 +195,11 @@ def run_steady_state_correlator(
     R(i, j) at i = N//4, j = 3N//4 with order parameter O = X, and records the
     full profile R(i, r) for r > i.
 
+    R is also measured at the end of every dt stage, which costs ~50 ms against
+    a run of many minutes and is what actually establishes convergence in time
+    (see STAGE_DRIFT_TOL). The most negative value over the profile is recorded
+    as a positivity check (see POSITIVITY_TOL).
+
     Input:
         L2_terms: bond jump terms (op, rate) (H and single-site terms empty).
         N: number of sites.
@@ -179,8 +208,19 @@ def run_steady_state_correlator(
             convergence sweep overrides it).
     Output: dict with keys 'N', 'init', 'chi_max', 'i', 'j', 'correlator',
         'profile' (list of (r, R(i, r))), 'final_overlap',
-        'max_discarded_weight', 'final_bond_dims', 'converged', 'state' (MPS).
+        'max_discarded_weight', 'final_bond_dims', 'converged', 'state' (MPS),
+        plus 'stage_correlators' (list of (dt, R) per dt stage), 'stage_drift'
+        (relative change in R over the last stage), 'time_converged'
+        (stage_drift < STAGE_DRIFT_TOL), 'min_profile' and
+        'positivity_violation' (see POSITIVITY_TOL).
     """
+    i, j = correlator_sites(N)
+    stage_correlators = []
+
+    def record_stage(stage: int, dt: float, st: mps_module.MPS) -> None:
+        """Sample R at a stage boundary (see tebd.find_steady_state)."""
+        stage_correlators.append((dt, observables.renyi2_correlator_mps(st, models.X, i, j)))
+
     state, history = tebd.find_steady_state(
         H2_terms=[],
         H1_terms=[],
@@ -193,14 +233,26 @@ def run_steady_state_correlator(
         cutoff=CUTOFF,
         recanonicalize_every=RECANON_EVERY,
         initial_state=build_initial_state(init_name, N),
+        stage_callback=record_stage,
     )
 
-    i, j = correlator_sites(N)
     R = observables.renyi2_correlator_mps(state, models.X, i, j)
     profile = [
         (r, observables.renyi2_correlator_mps(state, models.X, i, r))
         for r in range(i + 1, N)
     ]
+
+    # Drift over the final stage. Scaled by the larger magnitude so that a
+    # correlator collapsing towards zero (the L''=0 case) reads as small drift
+    # rather than dividing by a vanishing denominator.
+    if len(stage_correlators) >= 2:
+        last, prev = stage_correlators[-1][1], stage_correlators[-2][1]
+        scale = max(abs(last), abs(prev))
+        stage_drift = abs(last - prev) / scale if scale > 0 else 0.0
+    else:
+        stage_drift = float("nan")
+
+    min_profile = min([R] + [v for _, v in profile])
 
     final_overlap = history["overlap"][-1] if history["overlap"] else float("nan")
     return {
@@ -215,6 +267,11 @@ def run_steady_state_correlator(
         "max_discarded_weight": max(history["discarded_weight"], default=0.0),
         "final_bond_dims": list(state.bond_dims),
         "converged": (1.0 - final_overlap) < CONVERGENCE_TOL,
+        "stage_correlators": stage_correlators,
+        "stage_drift": stage_drift,
+        "time_converged": stage_drift < STAGE_DRIFT_TOL,
+        "min_profile": min_profile,
+        "positivity_violation": max(0.0, -min_profile) > POSITIVITY_TOL,
         "state": state,
     }
 
@@ -224,6 +281,24 @@ def _strip_state(res: dict) -> dict:
     return {k: v for k, v in res.items() if k != "state"}
 
 
+def format_diagnostics(res: dict) -> str:
+    """One-line convergence/positivity summary of a run result, for progress output.
+
+    Marks a run that is still drifting between its last two dt stages with '!'
+    and one whose correlator went negative with 'NEG' (see STAGE_DRIFT_TOL,
+    POSITIVITY_TOL). Cache entries written before these diagnostics existed
+    lack the keys and fall back to the old 'conv=' field.
+
+    Input: res, a run result dict from run_steady_state_correlator().
+    Output: a short string, padded to a fixed width so columns line up.
+    """
+    if "stage_drift" not in res:
+        return f"conv={str(res['converged']):5s}(old)  "
+    drift = res["stage_drift"]
+    return (f"drift={drift:7.1e}{' ' if res['time_converged'] else '!'}"
+            f"{'NEG ' if res['positivity_violation'] else '    '}")
+
+
 # ---------------------------------------------------------------------------
 # Parallel job plumbing
 # ---------------------------------------------------------------------------
@@ -231,6 +306,47 @@ def job_key(job: dict) -> str:
     """Filename-safe identifier for one job, used as its cache key."""
     return (f"{job['kind']}_{job['label']}_{job['init']}"
             f"_N{job['N']}_chi{job['chi_max']}")
+
+
+def run_config() -> dict:
+    """The settings that change a run's result but do NOT appear in its cache key.
+
+    The key covers (kind, label, init, N, chi_max) only, so lengthening the dt
+    schedule -- exactly the fix if a run turns out not to be converged in time
+    -- would otherwise be silently defeated by the cache handing back the old,
+    shorter run under the same name. run_job compares this against the value
+    stored in a cache file and recomputes on a mismatch.
+
+    Output: dict of the schedule/truncation settings a result depends on.
+    """
+    return {
+        "dt_schedule": list(DT_SCHEDULE),
+        "steps_per_dt": STEPS_PER_DT,
+        "recanonicalize_every": RECANON_EVERY,
+        "cutoff": CUTOFF,
+    }
+
+
+# The settings every cache entry written before run_config() existed was
+# produced with. Pinned as literals, not read from the constants above: the
+# whole point is to detect a later edit to those constants, so deriving this
+# from them would make every legacy entry match whatever the constants happen
+# to say and silently defeat the check.
+LEGACY_RUN_CONFIG = {
+    "dt_schedule": [0.1, 0.05, 0.02, 0.01, 0.005],
+    "steps_per_dt": 300,
+    "recanonicalize_every": 10,
+    "cutoff": 1e-10,
+}
+
+
+def cache_is_current(out: dict) -> bool:
+    """Whether a loaded cache entry was produced with the settings in force now.
+
+    Input: out, a dict unpickled from a cache file.
+    Output: True if it may be reused, False if it must be recomputed.
+    """
+    return out.get("run_config", LEGACY_RUN_CONFIG) == run_config()
 
 
 def run_job(job: dict) -> dict:
@@ -257,14 +373,16 @@ def run_job(job: dict) -> dict:
         try:
             with open(path, "rb") as f:
                 out = pickle.load(f)
-            out["cached"] = True
-            return out
+            if cache_is_current(out):
+                out["cached"] = True
+                return out
         except Exception:  # corrupt/partial cache file -- just recompute
             pass
 
     t0 = time.perf_counter()
     out = dict(job)
     out["cached"] = False
+    out["run_config"] = run_config()
     try:
         res = run_steady_state_correlator(
             build_L2_terms(job["L_pp"]), job["N"], job["init"], job["chi_max"]
@@ -484,7 +602,7 @@ def run_experiment() -> tuple[dict, dict]:
             timing = "cached" if out["cached"] else f"{out['seconds']:.0f}s"
             print(
                 f"{tag}  R({res['i']},{res['j']})={res['correlator']:.6e}  "
-                f"conv={str(res['converged']):5s} maxdisc={res['max_discarded_weight']:.1e}  "
+                f"{format_diagnostics(res)} maxdisc={res['max_discarded_weight']:.1e}  "
                 f"[{timing}, elapsed {(time.perf_counter()-t_start)/60:.1f}min]",
                 flush=True,
             )
