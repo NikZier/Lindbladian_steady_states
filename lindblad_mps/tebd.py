@@ -14,6 +14,7 @@ is specified exactly as in vectorize.py / exact.py: lists of
 
 import numpy as np
 
+from . import blas
 from . import mps as mps_module
 from . import vectorize
 
@@ -121,6 +122,7 @@ def evolve(
     cutoff: float | None = None,
     d_site: int = 2,
     recanonicalize_every: int = 10,
+    blas_threads: int | None = 1,
 ) -> dict:
     """Run n_steps of second-order-Trotter imaginary-time TEBD in place.
 
@@ -142,6 +144,10 @@ def evolve(
             every re-canonicalization.
         d_site: physical dimension of one site.
         recanonicalize_every: call state.canonicalize() every this many steps.
+        blas_threads: BLAS/LAPACK thread cap held for the whole loop (see
+            blas.limit_threads -- the default of 1 is ~4x faster end to end
+            at chi=32, because threaded LAPACK loses badly on the small
+            (chi*d, chi*d) SVDs). None leaves threading untouched.
     Output: dict with diagnostic history lists:
         'norm': pre-renormalization norm at each step (drifts away from 1
             as a measure of how fast the state is still evolving),
@@ -163,22 +169,25 @@ def evolve(
     history = {"norm": [], "overlap": [], "discarded_weight": []}
     state.normalize()
 
-    for step in range(n_steps):
-        prev = state.copy()
+    # Entered once per run, not per gate: the thread-limit switch itself costs
+    # ~1 ms, far more than a single bond SVD.
+    with blas.limit_threads(blas_threads):
+        for step in range(n_steps):
+            prev = state.copy()
 
-        d1 = apply_gate_layer(state, gates_half_odd, odd_bonds, chi_max, cutoff)
-        d2 = apply_gate_layer(state, gates_full_even, even_bonds, chi_max, cutoff)
-        d3 = apply_gate_layer(state, gates_half_odd, odd_bonds, chi_max, cutoff)
+            d1 = apply_gate_layer(state, gates_half_odd, odd_bonds, chi_max, cutoff)
+            d2 = apply_gate_layer(state, gates_full_even, even_bonds, chi_max, cutoff)
+            d3 = apply_gate_layer(state, gates_half_odd, odd_bonds, chi_max, cutoff)
 
-        norm = state.normalize()
-        if (step + 1) % recanonicalize_every == 0:
-            state.canonicalize(chi_max, cutoff)
-            state.normalize()
+            norm = state.normalize()
+            if (step + 1) % recanonicalize_every == 0:
+                state.canonicalize(chi_max, cutoff)
+                state.normalize()
 
-        overlap = abs(state.overlap(prev))
-        history["norm"].append(norm)
-        history["overlap"].append(overlap)
-        history["discarded_weight"].append(max(d1 + d2 + d3, default=0.0))
+            overlap = abs(state.overlap(prev))
+            history["norm"].append(norm)
+            history["overlap"].append(overlap)
+            history["discarded_weight"].append(max(d1 + d2 + d3, default=0.0))
 
     return history
 
@@ -196,6 +205,7 @@ def find_steady_state(
     d_site: int = 2,
     recanonicalize_every: int = 10,
     initial_state: mps_module.MPS | None = None,
+    blas_threads: int | None = 1,
 ) -> tuple[mps_module.MPS, dict]:
     """Find the Lindbladian steady state of a finite chain via annealed TEBD.
 
@@ -214,6 +224,7 @@ def find_steady_state(
         d_site: physical dimension of one site.
         recanonicalize_every: passed to evolve() at every stage.
         initial_state: starting MPS; defaults to MPS.maximally_mixed(N, d_site).
+        blas_threads: BLAS/LAPACK thread cap for the whole run, see evolve().
     Output:
         (state, history): the final MPS (canonicalized and unit-normalized)
         and a dict of concatenated per-step diagnostic lists (see evolve()),
@@ -224,24 +235,26 @@ def find_steady_state(
     )
 
     history = {"norm": [], "overlap": [], "discarded_weight": [], "dt": []}
-    for dt in dt_schedule:
-        stage_history = evolve(
-            state,
-            H2_terms,
-            H1_terms,
-            L2_terms,
-            L1_terms,
-            dt,
-            steps_per_dt,
-            chi_max,
-            cutoff,
-            d_site,
-            recanonicalize_every,
-        )
-        for key in ("norm", "overlap", "discarded_weight"):
-            history[key].extend(stage_history[key])
-        history["dt"].extend([dt] * steps_per_dt)
+    with blas.limit_threads(blas_threads):
+        for dt in dt_schedule:
+            stage_history = evolve(
+                state,
+                H2_terms,
+                H1_terms,
+                L2_terms,
+                L1_terms,
+                dt,
+                steps_per_dt,
+                chi_max,
+                cutoff,
+                d_site,
+                recanonicalize_every,
+                blas_threads,
+            )
+            for key in ("norm", "overlap", "discarded_weight"):
+                history[key].extend(stage_history[key])
+            history["dt"].extend([dt] * steps_per_dt)
 
-    state.canonicalize(chi_max, cutoff)
-    state.normalize()
+        state.canonicalize(chi_max, cutoff)
+        state.normalize()
     return state, history

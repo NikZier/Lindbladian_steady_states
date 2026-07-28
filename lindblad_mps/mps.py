@@ -14,8 +14,36 @@ below always means the plain Euclidean/Frobenius inner product
 """
 
 import numpy as np
+import scipy.linalg
 
 from . import vectorize
+
+
+def _robust_svd(mat: np.ndarray) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """Thin SVD with a fallback driver for non-convergence.
+
+    numpy uses LAPACK's divide-and-conquer gesdd, which is the fast choice but
+    occasionally fails to converge on the near-degenerate spectra that
+    truncated TEBD produces (a two-site tensor whose singular values span many
+    orders of magnitude with clusters of near-ties). gesvd, the older QR
+    iteration, is several times slower but much more robust; since the
+    fallback only fires on the rare failure it costs nothing on average.
+
+    Input: mat, the (m, n) matrix to decompose.
+    Output: (U, S, Vh) as from np.linalg.svd(..., full_matrices=False).
+    """
+    if not np.all(np.isfinite(mat)):
+        raise FloatingPointError(
+            "non-finite entries in the two-site tensor before SVD: the state "
+            "has diverged (check dt, the jump-operator rates, and whether the "
+            "norm is being renormalized each step)"
+        )
+    try:
+        return np.linalg.svd(mat, full_matrices=False)
+    except np.linalg.LinAlgError:
+        return scipy.linalg.svd(
+            mat, full_matrices=False, lapack_driver="gesvd", check_finite=False
+        )
 
 
 def _truncated_svd(
@@ -33,7 +61,7 @@ def _truncated_svd(
         the full untruncated singular value spectrum S_full (for diagnostics,
         e.g. computing discarded weight).
     """
-    U, S, Vh = np.linalg.svd(mat, full_matrices=False)
+    U, S, Vh = _robust_svd(mat)
     keep = len(S)
     if chi_max is not None:
         keep = min(keep, chi_max)
@@ -220,9 +248,13 @@ class MPS:
         chi_l, _, chi_m = A_l.shape
         _, _, chi_r = A_r.shape
 
-        theta = np.einsum("lim,mjr->lijr", A_l, A_r)
-        gate_tensor = gate.reshape(d, d, d, d)
-        theta = np.einsum("IJij,lijr->lIJr", gate_tensor, theta)
+        # tensordot (not einsum) throughout: einsum without optimize=True falls
+        # through to its scalar C loop instead of dispatching to BLAS, which
+        # costs ~10x wall time here at identical flop count.
+        theta = np.tensordot(A_l, A_r, axes=(2, 0))  # (l, i, j, r)
+        gate_tensor = gate.reshape(d, d, d, d)  # (I, J, i, j)
+        theta = np.tensordot(gate_tensor, theta, axes=([2, 3], [1, 2]))  # (I, J, l, r)
+        theta = theta.transpose(2, 0, 1, 3)  # (l, I, J, r)
 
         mat = theta.reshape(chi_l * d, d * chi_r)
         U, S, Vh, S_full = _truncated_svd(mat, chi_max, cutoff)
@@ -251,7 +283,7 @@ class MPS:
             Q, R = np.linalg.qr(mat)
             chi_new = Q.shape[1]
             self.tensors[n] = Q.reshape(chi_l, d, chi_new)
-            self.tensors[n + 1] = np.einsum("ab,bjr->ajr", R, self.tensors[n + 1])
+            self.tensors[n + 1] = np.tensordot(R, self.tensors[n + 1], axes=(1, 0))
 
     def canonicalize(self, chi_max: int | None = None, cutoff: float | None = None) -> float:
         """Restore canonical form and (optionally) compress the MPS.
@@ -288,7 +320,7 @@ class MPS:
 
             self.tensors[n] = Vh.reshape(chi_new, d, chi_r)
             US = U * S[None, :]
-            self.tensors[n - 1] = np.einsum("lim,ma->lia", self.tensors[n - 1], US)
+            self.tensors[n - 1] = np.tensordot(self.tensors[n - 1], US, axes=(2, 0))
         return max_discarded
 
     def norm2(self) -> float:
@@ -333,14 +365,21 @@ class MPS:
         """
         if other is None:
             other = self
-        I_d = np.eye(self.phys_dim, dtype=complex)
         E = np.ones((1, 1), dtype=complex)
         for n in range(self.N):
-            op = site_ops.get(n, I_d)
-            E = np.einsum(
-                "ab,aic,ij,bjd->cd", E, self.tensors[n].conj(), op, other.tensors[n],
-                optimize=True,
-            )
+            # Explicit pairwise tensordots rather than one optimize=True einsum:
+            # einsum would re-solve its contraction path on every site of every
+            # sweep, and would contract a dense identity at the (typically all)
+            # sites carrying no operator. Cost per site is 2 * chi^3 * d.
+            T = np.tensordot(E, self.tensors[n].conj(), axes=(0, 0))  # (b, i, c)
+            op = site_ops.get(n)
+            if op is None:
+                # identity site: contract the bra's physical leg straight
+                # through against the ket's.
+                E = np.tensordot(T, other.tensors[n], axes=([0, 1], [0, 1]))  # (c, d)
+            else:
+                T = np.tensordot(T, op, axes=(1, 0))  # (b, c, j)
+                E = np.tensordot(T, other.tensors[n], axes=([0, 2], [0, 1]))  # (c, d)
         return E[0, 0]
 
     def trace(self) -> complex:
@@ -360,7 +399,7 @@ class MPS:
         trace_vec = vectorize.vec(np.eye(self.local_dim, dtype=complex))
         v = np.ones((1,), dtype=complex)
         for n in range(self.N):
-            v = np.einsum("l,lir,i->r", v, self.tensors[n], trace_vec)
+            v = v @ np.tensordot(self.tensors[n], trace_vec, axes=(1, 0))
         return v[0]
 
     def normalize(self) -> float:

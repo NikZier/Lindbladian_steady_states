@@ -7,7 +7,7 @@ every nearest-neighbour bond:
 
     L   = X_a X_{a+1} (1 - Z_a Z_{a+1})           rate 1
     L'  = X_a X_{a+1} (1 - Z_a)(1 - Z_{a+1})      rate 1
-    L'' = random, [L'', Z(x)Z] = 0, ||L''|| = epsilon = 0.1   rate 1
+    L'' = random, [L'', Z(x)Z] = 0, ||L''|| = epsilon = 0.2   rate 1
 
 Every jump operator commutes with the strong Z_2 symmetry P = Z_1...Z_N, so
 the dynamics preserve the strong-symmetry sector of the initial state. We
@@ -24,25 +24,48 @@ both in the same (+,+) parity sector so their results are directly comparable:
 Comparing the two starts probes whether the (+,+)-sector steady state is
 unique (both give the same R) or degenerate / symmetry-broken (they differ).
 
-For each initial state, random L'' and size N in {4, 8, 16} we find the steady
-state by imaginary-time TEBD and evaluate the Renyi-2 correlator
+For each initial state, random L'' and size N in {4, 8, 12, 16, 20} we find
+the steady state by TEBD and evaluate the Renyi-2 correlator
 
     R(i, j) = Tr[rho A rho^dag A^dag] / Tr[rho^dag rho],   A = X_i X_j
 
-at i = N//4, j = 3N//4 (separation N/2, away from the open boundaries).
+at i = N//4, j = 3N//4 (separation N/2, away from the open boundaries), plus
+the full profile R(i, r) for every r > i at every size.
+
+Convergence
+-----------
+Bond dimension is checked separately by re-running one L'' sample at
+N = CONV_N over CHI_CONVERGENCE, from the 'zero' start. N=20 is where the
+truncation is most strained (at chi=32 fourteen of nineteen bonds sit at the
+cap), so the check is done there rather than at a smaller size. Note that
+run-to-run reproducibility of R is only ~1% -- BLAS summation order alone
+shifts it that much through 1500 steps of truncated non-unitary evolution --
+so the sweep resolves "is chi=32 adequate at the percent level", no finer.
+
+Execution
+---------
+The (initial state, L'', N) runs are completely independent, and BLAS is
+pinned to one thread inside TEBD (see lindblad_mps.blas), so they are farmed
+out to N_WORKERS processes. Jobs are queued longest-first to keep the tail
+short.
 
 Outputs (experiments/results/):
     renyi2_swssb.pkl -- config, per-sample L'' descriptions (matrix, Pauli
         coefficients, operator norm, seed) and correlator results for both
-        initial states, plus the L''=0 baseline. The Pauli coefficients let
-        each L'' be reconstructed exactly and extended to larger N later.
-    renyi2_swssb.png -- R vs N, one panel row per initial state, one line per
-        L'' sample, baseline overlaid.
+        initial states, plus the L''=0 baseline.
+    renyi2_swssb_chi_convergence.pkl -- the bond-dimension sweep, with the
+        description of the L'' it used.
+    renyi2_swssb.png        -- R vs N, one panel row per initial state.
+    renyi2_swssb_profile.png -- full R(i, r) profile at N = PROFILE_SIZE.
+    renyi2_swssb_chi.png    -- correlator and profile vs bond dimension.
 """
 
+import multiprocessing as mp
 import os
 import pickle
 import sys
+import time
+import traceback
 
 import numpy as np
 
@@ -54,9 +77,9 @@ from lindblad_mps import mps as mps_module
 # ---------------------------------------------------------------------------
 # Experiment configuration
 # ---------------------------------------------------------------------------
-EPSILON = 0.1
-SIZES = [4, 8, 16]
-N_SAMPLES = 8
+EPSILON = 0.2
+SIZES = [4, 8, 12, 16, 20]
+N_SAMPLES = 10
 BASE_SEED = 20260726
 INITIAL_STATES = ["zero", "neel"]  # both must share the parity sector (asserted)
 
@@ -66,9 +89,19 @@ DT_SCHEDULE = [0.1, 0.05, 0.02, 0.01, 0.005]
 STEPS_PER_DT = 300
 RECANON_EVERY = 10
 
+PROFILE_SIZE = 20  # size whose full R(i, r) profile is plotted
+
+CHI_CONVERGENCE = [8, 16, 32, 48, 64]
+CONV_N = 20
+CONV_INIT = "zero"
+CONV_SAMPLE = 0  # which L'' sample the chi sweep uses
+
+N_WORKERS = 6
+
 CONVERGENCE_TOL = 1e-6  # 1 - |<rho(t)|rho(t+dt)>| below this counts as converged
 
 RESULTS_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "results")
+CACHE_DIR = os.path.join(RESULTS_DIR, "_cache")  # one pickle per completed run
 
 _KET0 = np.array([1, 0], dtype=complex)
 _KET1 = np.array([0, 1], dtype=complex)
@@ -126,7 +159,10 @@ def build_L2_terms(L_pp: np.ndarray | None) -> list[tuple[np.ndarray, float]]:
 
 
 def run_steady_state_correlator(
-    L2_terms: list[tuple[np.ndarray, float]], N: int, init_name: str
+    L2_terms: list[tuple[np.ndarray, float]],
+    N: int,
+    init_name: str,
+    chi_max: int = CHI_MAX,
 ) -> dict:
     """Find the TEBD steady state at size N (from init_name) and measure R(i,j).
 
@@ -139,9 +175,11 @@ def run_steady_state_correlator(
         L2_terms: bond jump terms (op, rate) (H and single-site terms empty).
         N: number of sites.
         init_name: 'zero' or 'neel'.
-    Output: dict with keys 'N', 'init', 'i', 'j', 'correlator', 'profile'
-        (list of (r, R(i, r))), 'final_overlap', 'max_discarded_weight',
-        'converged', 'state' (the MPS).
+        chi_max: bond-dimension cap (defaults to the study-wide CHI_MAX; the
+            convergence sweep overrides it).
+    Output: dict with keys 'N', 'init', 'chi_max', 'i', 'j', 'correlator',
+        'profile' (list of (r, R(i, r))), 'final_overlap',
+        'max_discarded_weight', 'final_bond_dims', 'converged', 'state' (MPS).
     """
     state, history = tebd.find_steady_state(
         H2_terms=[],
@@ -151,7 +189,7 @@ def run_steady_state_correlator(
         N=N,
         dt_schedule=DT_SCHEDULE,
         steps_per_dt=STEPS_PER_DT,
-        chi_max=CHI_MAX,
+        chi_max=chi_max,
         cutoff=CUTOFF,
         recanonicalize_every=RECANON_EVERY,
         initial_state=build_initial_state(init_name, N),
@@ -168,17 +206,148 @@ def run_steady_state_correlator(
     return {
         "N": N,
         "init": init_name,
+        "chi_max": chi_max,
         "i": i,
         "j": j,
         "correlator": R,
         "profile": profile,
         "final_overlap": final_overlap,
         "max_discarded_weight": max(history["discarded_weight"], default=0.0),
+        "final_bond_dims": list(state.bond_dims),
         "converged": (1.0 - final_overlap) < CONVERGENCE_TOL,
         "state": state,
     }
 
 
+def _strip_state(res: dict) -> dict:
+    """Drop the MPS object from a run result (keeps the pickle small)."""
+    return {k: v for k, v in res.items() if k != "state"}
+
+
+# ---------------------------------------------------------------------------
+# Parallel job plumbing
+# ---------------------------------------------------------------------------
+def job_key(job: dict) -> str:
+    """Filename-safe identifier for one job, used as its cache key."""
+    return (f"{job['kind']}_{job['label']}_{job['init']}"
+            f"_N{job['N']}_chi{job['chi_max']}")
+
+
+def run_job(job: dict) -> dict:
+    """Execute one steady-state run described by a job dict (worker entry point).
+
+    Must be a module-level function so that it survives pickling to the
+    worker processes (Windows uses spawn, not fork).
+
+    Every completed job is written to its own cache file before returning, and
+    a cached job is returned without recomputing. A full sweep is ~45 minutes,
+    so a crash (or a deliberate re-run after changing only part of the study)
+    must not throw away the runs that already succeeded.
+
+    Exceptions are caught and returned rather than raised: pool.imap_unordered
+    re-raises in the parent and would abort every other worker, losing the
+    whole sweep because one bond SVD failed to converge.
+
+    Input: job dict with keys 'kind', 'label', 'L_pp', 'N', 'init', 'chi_max'.
+    Output: the job dict augmented with 'result' (state-stripped) and
+        'seconds', or with 'error' (a traceback string) if the run raised.
+    """
+    path = os.path.join(CACHE_DIR, job_key(job) + ".pkl")
+    if os.path.exists(path):
+        try:
+            with open(path, "rb") as f:
+                out = pickle.load(f)
+            out["cached"] = True
+            return out
+        except Exception:  # corrupt/partial cache file -- just recompute
+            pass
+
+    t0 = time.perf_counter()
+    out = dict(job)
+    out["cached"] = False
+    try:
+        res = run_steady_state_correlator(
+            build_L2_terms(job["L_pp"]), job["N"], job["init"], job["chi_max"]
+        )
+        out["result"] = _strip_state(res)
+    except Exception:
+        out["error"] = traceback.format_exc()
+    out["seconds"] = time.perf_counter() - t0
+
+    if "error" not in out:
+        os.makedirs(CACHE_DIR, exist_ok=True)
+        tmp = path + f".{os.getpid()}.tmp"
+        with open(tmp, "wb") as f:
+            pickle.dump(out, f)
+        os.replace(tmp, path)  # atomic: a reader never sees a half-written file
+    return out
+
+
+def estimated_cost(job: dict) -> float:
+    """Rough relative cost of a job, used to queue the long ones first.
+
+    TEBD cost is dominated by one SVD per bond per step, which is O(chi^3)
+    at fixed physical dimension, and there are N-1 bonds.
+    """
+    return (job["N"] - 1) * job["chi_max"] ** 3
+
+
+def build_jobs(samples: list[dict]) -> list[dict]:
+    """Enumerate every steady-state run the study needs, longest job first.
+
+    Input: samples, the list of per-sample dicts (each with 'seed', 'L_pp',
+        'description') produced by draw_samples().
+    Output: list of job dicts ready for run_job(), sorted by descending
+        estimated cost so the 6-worker pool has a short tail.
+    """
+    jobs = []
+    for init in INITIAL_STATES:
+        for N in SIZES:
+            jobs.append({"kind": "main", "label": "baseline", "sample": None,
+                         "L_pp": None, "N": N, "init": init, "chi_max": CHI_MAX})
+            for s, sample in enumerate(samples):
+                jobs.append({"kind": "main", "label": f"sample{s}", "sample": s,
+                             "L_pp": sample["L_pp"], "N": N, "init": init,
+                             "chi_max": CHI_MAX})
+
+    conv_Lpp = samples[CONV_SAMPLE]["L_pp"]
+    for chi in CHI_CONVERGENCE:
+        if chi == CHI_MAX:
+            continue  # already covered by the main grid; copied across afterwards
+        jobs.append({"kind": "conv", "label": f"chi{chi}", "sample": CONV_SAMPLE,
+                     "L_pp": conv_Lpp, "N": CONV_N, "init": CONV_INIT,
+                     "chi_max": chi})
+
+    jobs.sort(key=estimated_cost, reverse=True)
+    return jobs
+
+
+def draw_samples() -> list[dict]:
+    """Draw the N_SAMPLES random parity-commuting L'' operators.
+
+    Each is generated from its own seeded Generator so a sample can be
+    reproduced (or extended to new sizes) independently of the others.
+
+    Output: list of dicts with 'seed', 'L_pp' and 'description' (see
+        models.describe_operator).
+    """
+    samples = []
+    for s in range(N_SAMPLES):
+        seed = BASE_SEED + 1 + s
+        rng = np.random.default_rng(seed)
+        L_pp = models.random_zz_commuting_operator(EPSILON, rng)
+        assert models.commutes_with_zz(L_pp), "sampled L'' must commute with ZZ"
+        samples.append({
+            "seed": seed,
+            "L_pp": L_pp,
+            "description": models.describe_operator(L_pp, EPSILON, seed=seed),
+        })
+    return samples
+
+
+# ---------------------------------------------------------------------------
+# Validation against dense exact diagonalization
+# ---------------------------------------------------------------------------
 def validate_against_exact(
     L2_terms: list[tuple[np.ndarray, float]], init_name: str, N: int = 4
 ) -> dict:
@@ -217,21 +386,19 @@ def validate_against_exact(
     return {"residual": residual, "sym_breaking": sym, "correlator_abs_diff": diff}
 
 
-def _strip_state(res: dict) -> dict:
-    """Drop the MPS object from a run result (keeps the pickle small)."""
-    return {k: v for k, v in res.items() if k != "state"}
+# ---------------------------------------------------------------------------
+# Driver
+# ---------------------------------------------------------------------------
+def run_experiment() -> tuple[dict, dict]:
+    """Run the full study on a pool of N_WORKERS processes.
 
-
-def run_experiment() -> dict:
-    """Run the full study: baseline + N_SAMPLES random L'' across all sizes,
-    for every initial state in INITIAL_STATES.
-
-    Output: a results dict ready to pickle (no live MPS objects).
+    Output: (results, convergence) -- two pickle-ready dicts (no live MPS
+        objects anywhere).
     """
     os.makedirs(RESULTS_DIR, exist_ok=True)
 
     # Guard: all initial states must share the same parity sector at every size.
-    for N in SIZES:
+    for N in SIZES + [CONV_N]:
         charges = {name: parity_charge(basis_bits(name, N)) for name in INITIAL_STATES}
         assert len(set(charges.values())) == 1, (
             f"initial states span different parity sectors at N={N}: {charges}"
@@ -249,100 +416,150 @@ def run_experiment() -> dict:
             flush=True,
         )
 
+    samples = draw_samples()
+    for s, sample in enumerate(samples):
+        print(f"  L'' sample {s}: seed={sample['seed']}  "
+              f"||L''||={sample['description']['operator_norm']:.4f}", flush=True)
+
+    jobs = build_jobs(samples)
+    print(f"\n{len(jobs)} runs queued on {N_WORKERS} workers "
+          f"(sizes {SIZES}, {N_SAMPLES} samples + baseline, "
+          f"chi sweep {CHI_CONVERGENCE} at N={CONV_N}) ...\n", flush=True)
+
+    config = {
+        "epsilon": EPSILON,
+        "sizes": SIZES,
+        "n_samples": N_SAMPLES,
+        "base_seed": BASE_SEED,
+        "initial_states": INITIAL_STATES,
+        "chi_max": CHI_MAX,
+        "cutoff": CUTOFF,
+        "dt_schedule": DT_SCHEDULE,
+        "steps_per_dt": STEPS_PER_DT,
+        "recanonicalize_every": RECANON_EVERY,
+        "site_rule": "i = N//4, j = 3N//4",
+        "profile_size": PROFILE_SIZE,
+        "order_parameter": "X",
+        "model": "L=XX(1-ZZ), L'=XX(1-Za)(1-Zb), L''=random parity-commuting, rates=1",
+        "neel_note": "|0101...>, same (+,+) parity sector as |0...0> for all sizes used",
+    }
     results = {
-        "config": {
-            "epsilon": EPSILON,
-            "sizes": SIZES,
-            "n_samples": N_SAMPLES,
-            "base_seed": BASE_SEED,
-            "initial_states": INITIAL_STATES,
-            "chi_max": CHI_MAX,
-            "cutoff": CUTOFF,
-            "dt_schedule": DT_SCHEDULE,
-            "steps_per_dt": STEPS_PER_DT,
-            "site_rule": "i = N//4, j = 3N//4",
-            "order_parameter": "X",
-            "model": "L=XX(1-ZZ), L'=XX(1-Za)(1-Zb), L''=random parity-commuting, rates=1",
-            "neel_note": "|0101...>, same (+,+) parity sector as |0...0> for N in {4,8,16}",
-        },
+        "config": config,
         "validation_N4": validation,
         "baseline": {init: {} for init in INITIAL_STATES},
-        "samples": [],
+        "samples": [{"description": s["description"],
+                     "results": {init: {} for init in INITIAL_STATES}}
+                    for s in samples],
+    }
+    convergence = {
+        "config": dict(config, chi_convergence=CHI_CONVERGENCE, conv_N=CONV_N,
+                       conv_init=CONV_INIT, conv_sample=CONV_SAMPLE),
+        "description": samples[CONV_SAMPLE]["description"],
+        "results": {},
     }
 
-    # Baseline (no L'') for each initial state.
-    print("Baseline (L''=0):", flush=True)
-    for init in INITIAL_STATES:
-        for N in SIZES:
-            res = run_steady_state_correlator(build_L2_terms(None), N, init)
-            results["baseline"][init][N] = _strip_state(res)
+    os.makedirs(CACHE_DIR, exist_ok=True)
+    t_start = time.perf_counter()
+    done = 0
+    failures = []
+    with mp.Pool(processes=N_WORKERS) as pool:
+        for out in pool.imap_unordered(run_job, jobs):
+            done += 1
+            tag = (f"  [{done:3d}/{len(jobs)}] {out['label']:>9s} {out['init']:>5s} "
+                   f"N={out['N']:2d} chi={out['chi_max']:2d}")
+            if "error" in out:
+                failures.append(out)
+                print(f"{tag}  *** FAILED ***  "
+                      f"{out['error'].strip().splitlines()[-1]}", flush=True)
+                continue
+
+            res = out["result"]
+            if out["kind"] == "main":
+                if out["sample"] is None:
+                    results["baseline"][out["init"]][out["N"]] = res
+                else:
+                    results["samples"][out["sample"]]["results"][out["init"]][out["N"]] = res
+            else:
+                convergence["results"][out["chi_max"]] = res
+            timing = "cached" if out["cached"] else f"{out['seconds']:.0f}s"
             print(
-                f"  [{init}] N={N:2d}  R({res['i']},{res['j']})={res['correlator']:.6e}  "
-                f"conv={res['converged']}  maxdisc={res['max_discarded_weight']:.1e}",
+                f"{tag}  R({res['i']},{res['j']})={res['correlator']:.6e}  "
+                f"conv={str(res['converged']):5s} maxdisc={res['max_discarded_weight']:.1e}  "
+                f"[{timing}, elapsed {(time.perf_counter()-t_start)/60:.1f}min]",
                 flush=True,
             )
 
-    # Random L'' samples.
-    for s in range(N_SAMPLES):
-        seed = BASE_SEED + 1 + s
-        rng = np.random.default_rng(seed)
-        L_pp = models.random_zz_commuting_operator(EPSILON, rng)
-        description = models.describe_operator(L_pp, EPSILON, seed=seed)
-        assert models.commutes_with_zz(L_pp), "sampled L'' must commute with ZZ"
+    # The chi = CHI_MAX point of the sweep is the corresponding main-grid run.
+    conv_main = results["samples"][CONV_SAMPLE]["results"][CONV_INIT].get(CONV_N)
+    if conv_main is not None:
+        convergence["results"][CHI_MAX] = conv_main
 
-        print(
-            f"Sample {s} (seed={seed}, ||L''||={description['operator_norm']:.3f}):",
-            flush=True,
-        )
-        sample_results = {init: {} for init in INITIAL_STATES}
-        for init in INITIAL_STATES:
-            for N in SIZES:
-                res = run_steady_state_correlator(build_L2_terms(L_pp), N, init)
-                sample_results[init][N] = _strip_state(res)
-                print(
-                    f"  [{init}] N={N:2d}  R({res['i']},{res['j']})={res['correlator']:.6e}"
-                    f"  conv={res['converged']}  maxdisc={res['max_discarded_weight']:.1e}",
-                    flush=True,
-                )
-        results["samples"].append({"description": description, "results": sample_results})
+    results["failures"] = [{k: v for k, v in f.items() if k != "L_pp"} for f in failures]
+    convergence["failures"] = results["failures"]
 
-    return results
+    print(f"\n{done - len(failures)}/{len(jobs)} runs succeeded in "
+          f"{(time.perf_counter()-t_start)/60:.1f} min.", flush=True)
+    if failures:
+        print(f"{len(failures)} FAILED (results for these are absent from the "
+              f"pickles; re-running reuses the cache and retries only these):",
+              flush=True)
+        for f in failures:
+            print(f"  {job_key(f)}", flush=True)
+    return results, convergence
 
 
-def save_results(results: dict) -> str:
-    """Pickle the results dict to experiments/results/renyi2_swssb.pkl."""
-    path = os.path.join(RESULTS_DIR, "renyi2_swssb.pkl")
-    with open(path, "wb") as f:
+def save_results(results: dict, convergence: dict) -> tuple[str, str]:
+    """Pickle the main results and the bond-dimension sweep.
+
+    Output: (main_path, convergence_path).
+    """
+    os.makedirs(RESULTS_DIR, exist_ok=True)
+    main_path = os.path.join(RESULTS_DIR, "renyi2_swssb.pkl")
+    conv_path = os.path.join(RESULTS_DIR, "renyi2_swssb_chi_convergence.pkl")
+    with open(main_path, "wb") as f:
         pickle.dump(results, f)
-    return path
+    with open(conv_path, "wb") as f:
+        pickle.dump(convergence, f)
+    return main_path, conv_path
 
 
-def plot_results(results: dict) -> str:
-    """Plot R vs N: one row per initial state, columns linear and semilog."""
+# ---------------------------------------------------------------------------
+# Plots
+# ---------------------------------------------------------------------------
+def _mpl():
+    """Import pyplot with a headless backend."""
     import matplotlib
 
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
 
+    return plt
+
+
+def plot_results(results: dict) -> str:
+    """Plot R vs N: one row per initial state, columns linear and semilog."""
+    plt = _mpl()
     sizes = results["config"]["sizes"]
     inits = results["config"]["initial_states"]
     n_samp = len(results["samples"])
     cmap = plt.get_cmap("viridis")
 
-    fig, axes = plt.subplots(len(inits), 2, figsize=(12, 4.5 * len(inits)), squeeze=False)
+    def series(store):
+        """(sizes, R) for the sizes actually present -- a failed run is skipped."""
+        present = [N for N in sizes if N in store]
+        return present, [store[N]["correlator"] for N in present]
 
+    fig, axes = plt.subplots(len(inits), 2, figsize=(12, 4.5 * len(inits)), squeeze=False)
     for row, init in enumerate(inits):
         ax_lin, ax_log = axes[row]
-        baseline_R = [results["baseline"][init][N]["correlator"] for N in sizes]
+        bx, by = series(results["baseline"][init])
         for ax in (ax_lin, ax_log):
-            ax.plot(sizes, baseline_R, "k--o", lw=2.5, zorder=5, label="baseline (L''=0)")
-
+            ax.plot(bx, by, "k--o", lw=2.5, zorder=5, label="baseline (L''=0)")
         for s, sample in enumerate(results["samples"]):
-            R_vals = [sample["results"][init][N]["correlator"] for N in sizes]
+            sx, sy = series(sample["results"][init])
             color = cmap(s / max(n_samp - 1, 1))
             for ax in (ax_lin, ax_log):
-                ax.plot(sizes, R_vals, "-o", color=color, alpha=0.85, label=f"sample {s}")
-
+                ax.plot(sx, sy, "-o", color=color, alpha=0.85, label=f"sample {s}")
         for ax in (ax_lin, ax_log):
             ax.set_xlabel("system size N")
             ax.set_ylabel(r"$R(N/4,\ 3N/4)$")
@@ -364,13 +581,104 @@ def plot_results(results: dict) -> str:
     return path
 
 
+def plot_profile(results: dict) -> str:
+    """Plot the full R(i, r) profile at N = PROFILE_SIZE, one panel per initial state."""
+    plt = _mpl()
+    N = results["config"]["profile_size"]
+    inits = results["config"]["initial_states"]
+    n_samp = len(results["samples"])
+    cmap = plt.get_cmap("viridis")
+
+    fig, axes = plt.subplots(1, len(inits), figsize=(6.5 * len(inits), 5), squeeze=False)
+    for col, init in enumerate(inits):
+        ax = axes[0][col]
+        if N not in results["baseline"][init]:
+            continue
+        base = results["baseline"][init][N]["profile"]
+        ax.plot([r for r, _ in base], [v for _, v in base],
+                "k--o", lw=2.5, zorder=5, label="baseline (L''=0)")
+        for s, sample in enumerate(results["samples"]):
+            if N not in sample["results"][init]:
+                continue
+            prof = sample["results"][init][N]["profile"]
+            ax.plot([r for r, _ in prof], [v for _, v in prof], "-o",
+                    color=cmap(s / max(n_samp - 1, 1)), alpha=0.85, label=f"sample {s}")
+        i = results["baseline"][init][N]["i"]
+        ax.set_xlabel(f"site r   (reference site i = {i})")
+        ax.set_ylabel(r"$R(i,\ r)$")
+        ax.set_yscale("log")
+        ax.grid(True, alpha=0.3)
+        ax.set_title(f"N = {N},  init = |{init}>")
+        if col == 0:
+            ax.legend(fontsize=8, ncol=2)
+
+    fig.suptitle(rf"Full Renyi-2 profile at $N={N}$ ($\epsilon={results['config']['epsilon']}$)")
+    fig.tight_layout()
+    path = os.path.join(RESULTS_DIR, "renyi2_swssb_profile.png")
+    fig.savefig(path, dpi=150)
+    plt.close(fig)
+    return path
+
+
+def plot_convergence(convergence: dict) -> str:
+    """Plot the bond-dimension sweep: R vs chi, and the profile at each chi."""
+    plt = _mpl()
+    cfg = convergence["config"]
+    chis = sorted(convergence["results"])
+    R = [convergence["results"][c]["correlator"] for c in chis]
+
+    fig, (ax0, ax1) = plt.subplots(1, 2, figsize=(13, 5))
+    ax0.plot(chis, R, "-o", color="crimson")
+    ax0.axhline(R[-1], ls=":", color="grey", label=rf"$\chi={chis[-1]}$ value")
+    ax0.set_xlabel(r"bond dimension $\chi$")
+    ax0.set_ylabel(r"$R(N/4,\ 3N/4)$")
+    ax0.set_xticks(chis)
+    ax0.grid(True, alpha=0.3)
+    ax0.legend(fontsize=9)
+    ax0.set_title(f"convergence at N={cfg['conv_N']}, init=|{cfg['conv_init']}>")
+
+    cmap = plt.get_cmap("plasma")
+    for k, c in enumerate(chis):
+        prof = convergence["results"][c]["profile"]
+        ax1.plot([r for r, _ in prof], [v for _, v in prof], "-o",
+                 color=cmap(k / max(len(chis) - 1, 1)), label=rf"$\chi={c}$")
+    ax1.set_xlabel("site r")
+    ax1.set_ylabel(r"$R(i,\ r)$")
+    ax1.set_yscale("log")
+    ax1.grid(True, alpha=0.3)
+    ax1.legend(fontsize=9)
+    ax1.set_title("profile vs bond dimension")
+
+    fig.suptitle(rf"Bond-dimension convergence, sample {cfg['conv_sample']} "
+                 rf"($\epsilon={cfg['epsilon']}$)")
+    fig.tight_layout()
+    path = os.path.join(RESULTS_DIR, "renyi2_swssb_chi.png")
+    fig.savefig(path, dpi=150)
+    plt.close(fig)
+    return path
+
+
 def main() -> None:
-    results = run_experiment()
-    pkl = save_results(results)
-    png = plot_results(results)
-    print(f"\nSaved results -> {pkl}", flush=True)
-    print(f"Saved plot    -> {png}", flush=True)
+    results, convergence = run_experiment()
+
+    # Pickle before plotting: the data is the deliverable, a plotting failure
+    # must never cost the simulation output.
+    pkl, conv_pkl = save_results(results, convergence)
+    print(f"\nSaved results     -> {pkl}", flush=True)
+    print(f"Saved convergence -> {conv_pkl}", flush=True)
+
+    for name, fn, arg in (
+        ("plot", plot_results, results),
+        ("profile", plot_profile, results),
+        ("chi plot", plot_convergence, convergence),
+    ):
+        try:
+            print(f"Saved {name:<13s} -> {fn(arg)}", flush=True)
+        except Exception:
+            print(f"!! {name} failed (data is still saved):\n{traceback.format_exc()}",
+                  flush=True)
 
 
 if __name__ == "__main__":
+    mp.freeze_support()
     main()
