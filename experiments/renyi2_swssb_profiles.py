@@ -33,7 +33,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import renyi2_swssb as ex
 
 PROFILE_N = 20
-GRID_PKL = "renyi2_swssb_chi128.pkl"
+INITS = ["zero", "neel"]  # a grid pickle that is absent is skipped
 SWEEP_PKL = "renyi2_swssb_chi_extended.pkl"
 
 # The L''=0 control floor: worst (most negative) point over the control
@@ -69,14 +69,28 @@ def load(name: str) -> dict:
         return pickle.load(f)
 
 
+def fig_path(base: str, init: str) -> str:
+    """Output path for a figure, suffixed by initial state ('' for zero)."""
+    tail = "" if init == "zero" else f"_{init}"
+    return os.path.join(ex.RESULTS_DIR, f"{base}{tail}.png")
+
+
+def init_label(grid: dict) -> str:
+    """LaTeX label for the grid's initial state, for figure titles."""
+    return {"zero": r"$|0\ldots0\rangle$",
+            "neel": r"$|0101\ldots\rangle$"}.get(grid["config"]["init"],
+                                                 grid["config"]["init"])
+
+
 def print_profile_table(grid: dict) -> None:
     """Print R(i, r) at N=PROFILE_N for every sample, one row per sample."""
     res = grid["results"][PROFILE_N]
     i = res[0]["i"]
     radii = [r for r, _ in res[0]["profile"]]
 
-    print(f"\nFull Renyi-2 profile at N={PROFILE_N}, chi={grid['config']['chi_max']}, "
-          f"init=|{grid['config']['init']}>,  reference site i={i}")
+    print(f"\n=== Full Renyi-2 profile at N={PROFILE_N}, "
+          f"chi={grid['config']['chi_max']}, "
+          f"init=|{grid['config']['init']}>,  reference site i={i} ===")
     print(f"(SWSSB = flat in r. Control floor {CONTROL_FLOOR:.2e}.)\n")
     print(f"{'r':>7} " + " ".join(f"{r:>9d}" for r in radii)
           + f" {'flat?':>8} {'bond':>9}")
@@ -183,10 +197,11 @@ def plot_profiles(grid: dict) -> str:
     _label_curve_ends(ax1, anchors1, "left")
 
     fig.suptitle(rf"Renyi-2 profile at $N={PROFILE_N}$, $\chi={chi}$, "
-                 rf"{n} random $L''$ ($\epsilon={grid['config']['epsilon']}$)   "
+                 rf"{n} random $L''$ ($\epsilon={grid['config']['epsilon']}$, "
+                 rf"init {init_label(grid)})   "
                  rf"— curve labels are sample indices, * = $\chi$-limited")
     fig.tight_layout()
-    path = os.path.join(ex.RESULTS_DIR, "renyi2_swssb_n20_profiles.png")
+    path = fig_path("renyi2_swssb_n20_profiles", grid["config"]["init"])
     fig.savefig(path, dpi=150)
     plt.close(fig)
     return path
@@ -267,9 +282,9 @@ def plot_size_scaling(grid: dict) -> str:
 
     fig.suptitle(rf"SWSSB correlator vs system size, {n} random $L''$ "
                  rf"($\epsilon={grid['config']['epsilon']}$, init "
-                 rf"$|0\ldots0\rangle$)   — labels are sample indices")
+                 rf"{init_label(grid)})   — labels are sample indices")
     fig.tight_layout()
-    path = os.path.join(ex.RESULTS_DIR, "renyi2_swssb_size_scaling.png")
+    path = fig_path("renyi2_swssb_size_scaling", grid["config"]["init"])
     fig.savefig(path, dpi=150)
     plt.close(fig)
     return path
@@ -352,13 +367,102 @@ def plot_convergence(sweep: dict, grid: dict) -> str:
     return path
 
 
+def compare_inits(g_zero: dict, g_neel: dict) -> str:
+    """Compare the two initial states -- the steady-state uniqueness test.
+
+    Both starts lie in the (+,+) parity sector, so a unique steady state there
+    forces the same R from either. A deviation is therefore either genuine
+    degeneracy or, far more likely, one of the two runs not having relaxed:
+    'zero' begins at the baseline's dark state and climbs from R = 0, so
+    under-relaxation makes it read low, whereas 'neel' begins far away carrying
+    real correlations. Where they agree, the value is converged from both
+    directions; where they split, the larger one bounds the truth from below.
+    """
+    plt = ex._mpl()
+    sizes = [N for N in g_zero["config"]["sizes"] if N in g_neel["config"]["sizes"]]
+    n = g_zero["config"]["n_samples"]
+    chi = g_zero["config"]["chi_max"]
+    cmap = plt.get_cmap("viridis")
+
+    print(f"\n=== zero vs neel at chi={chi}: relative difference "
+          f"|z-n| / max(|z|,|n|) ===")
+    print(f"{'s':>2} " + " ".join(f"{'N=%d' % N:>9}" for N in sizes))
+    for s in range(n):
+        diffs = []
+        for N in sizes:
+            z = g_zero["results"][N][s]["correlator"]
+            v = g_neel["results"][N][s]["correlator"]
+            diffs.append(abs(z - v) / max(abs(z), abs(v)))
+        print(f"{s:>2} " + " ".join(f"{d:9.2%}" for d in diffs))
+
+    fig, (ax0, ax1) = plt.subplots(1, 2, figsize=(13.5, 5.5))
+    anchors = []
+    for s in range(n):
+        color = cmap(s / max(n - 1, 1))
+        z = [g_zero["results"][N][s]["correlator"] for N in sizes]
+        v = [g_neel["results"][N][s]["correlator"] for N in sizes]
+        ax0.plot(sizes, z, "-o", color=color, lw=1.8, ms=5)
+        ax0.plot(sizes, v, "--s", color=color, lw=1.4, ms=5, mfc="none", alpha=0.85)
+        ax1.plot(sizes, [b / a for a, b in zip(z, v)], "-o", color=color,
+                 lw=1.8, ms=5)
+        anchors.append((sizes[-1], v[-1] / z[-1], f"{s}", color))
+
+    ax0.set_yscale("log")
+    ax0.set_ylabel(r"$R(N/4,\ 3N/4)$")
+    solid = plt.Line2D([], [], color="0.35", lw=1.8, marker="o", ms=5)
+    dashed = plt.Line2D([], [], color="0.35", lw=1.4, ls="--", marker="s",
+                        ms=5, mfc="none")
+    ax0.legend([solid, dashed], [r"init $|0\ldots0\rangle$",
+                                 r"init $|0101\ldots\rangle$"],
+               fontsize=9, loc="best")
+    ax0.set_title(rf"both starts at $\chi={chi}$")
+
+    ax1.axhline(1.0, ls=":", color="grey", lw=1.5)
+    ax1.set_ylabel(r"$R_{\mathrm{neel}}\ /\ R_{\mathrm{zero}}$")
+    ax1.set_title("agreement (1.0 = same steady state from both starts)")
+
+    for ax in (ax0, ax1):
+        ax.set_xlabel("system size N")
+        ax.set_xticks(sizes)
+        ax.grid(True, alpha=0.25)
+        ax.margins(x=0.12)
+
+    fig.canvas.draw()
+    _label_curve_ends(ax1, anchors, "right")
+
+    fig.suptitle(rf"Steady-state uniqueness in the $(+,+)$ sector: "
+                 rf"does the answer depend on where you start? "
+                 rf"($\epsilon={g_zero['config']['epsilon']}$, $\chi={chi}$)")
+    fig.tight_layout()
+    path = os.path.join(ex.RESULTS_DIR, "renyi2_swssb_init_comparison.png")
+    fig.savefig(path, dpi=150)
+    plt.close(fig)
+    print(f"\nSaved init comparison -> {path}")
+    return path
+
+
 def main() -> None:
-    grid = load(GRID_PKL)
-    sweep = load(SWEEP_PKL)
-    print_profile_table(grid)
-    print(f"\nSaved profiles      -> {plot_profiles(grid)}")
-    print(f"Saved size scaling  -> {plot_size_scaling(grid)}")
-    print(f"Saved chi sweep     -> {plot_convergence(sweep, grid)}")
+    grids = {}
+    for init in INITS:
+        tail = "" if init == "zero" else f"_{init}"
+        name = f"renyi2_swssb_chi128{tail}.pkl"
+        if not os.path.exists(os.path.join(ex.RESULTS_DIR, name)):
+            print(f"(no grid for init=|{init}> yet, skipping: {name})")
+            continue
+        grids[init] = grid = load(name)
+        print_profile_table(grid)
+        print(f"\nSaved profiles      -> {plot_profiles(grid)}")
+        print(f"Saved size scaling  -> {plot_size_scaling(grid)}")
+
+    # The chi sweep itself only exists for the zero start (one sample, many chi),
+    # so its first two panels are zero-specific; the third panel is drawn from
+    # whichever grid is available, preferring zero for continuity.
+    if grids:
+        base = grids.get("zero") or next(iter(grids.values()))
+        print(f"Saved chi sweep     -> {plot_convergence(load(SWEEP_PKL), base)}")
+
+    if len(grids) == 2:
+        compare_inits(grids["zero"], grids["neel"])
 
 
 if __name__ == "__main__":

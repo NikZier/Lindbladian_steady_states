@@ -67,20 +67,32 @@ CHI = 128
 # settled at 14-16, i.e. they were exact). They anchor the small-N end of the
 # size scaling, where the answer is not truncation-limited by construction.
 SIZES = [4, 8, 12, 16, 20]
-INIT = "zero"
+
+# Both strongly-symmetric starts, run on the same grid. They share the (+,+)
+# parity sector, so a unique steady state there must give the same R from
+# either -- which is the point of running both. 'zero' is the baseline's dark
+# state and approaches the perturbed steady state from R = 0, i.e. from below;
+# 'neel' starts far away carrying real correlations and approaches from a
+# different direction, so together they bracket rather than merely repeat.
+INITS = ["zero", "neel"]
 CONTROL_KIND = "basectrl"  # the L''=0 neel runs at CHI, already in the cache
 
 
-def build_jobs(samples: list[dict]) -> list[dict]:
-    """Enumerate the 10 x |SIZES| grid, longest job first.
+def suffix(init: str) -> str:
+    """Output-filename suffix for an initial state ('' for the original zero run)."""
+    return "" if init == "zero" else f"_{init}"
 
-    Input: samples, from ex.draw_samples().
+
+def build_jobs(samples: list[dict], init: str) -> list[dict]:
+    """Enumerate the 10 x |SIZES| grid for one initial state, longest job first.
+
+    Input: samples, from ex.draw_samples(); init, 'zero' or 'neel'.
     Output: list of job dicts for ex.run_job(), sorted by descending cost so
         the worker pool has a short tail.
     """
     jobs = [
         {"kind": f"chi{CHI}", "label": f"sample{s}", "sample": s,
-         "L_pp": sample["L_pp"], "N": N, "init": INIT, "chi_max": CHI}
+         "L_pp": sample["L_pp"], "N": N, "init": init, "chi_max": CHI}
         for s, sample in enumerate(samples)
         for N in SIZES
     ]
@@ -90,6 +102,11 @@ def build_jobs(samples: list[dict]) -> list[dict]:
 
 def load_control() -> dict:
     """Pull the L''=0 chi=128 control runs from the cache, if present.
+
+    These are 'neel' runs whatever grid they are being compared against: the
+    'zero' baseline is the dark state itself and is exactly 0 at every N, so it
+    measures nothing. Only the neel baseline has a nontrivial transient and
+    therefore a meaningful truncation-noise floor.
 
     Output: dict N -> result, empty if the control has not been run.
     """
@@ -102,7 +119,7 @@ def load_control() -> dict:
     return control
 
 
-def previous_grids() -> dict:
+def previous_grids(init: str) -> dict:
     """Load the chi=32 and chi=64 correlators for the same samples, for comparison.
 
     Output: dict chi -> {N -> [R per sample]}, omitting anything not on disk.
@@ -112,7 +129,7 @@ def previous_grids() -> dict:
     if os.path.exists(main_path):
         with open(main_path, "rb") as f:
             main = pickle.load(f)
-        out[32] = {N: [s["results"][INIT][N]["correlator"] for s in main["samples"]]
+        out[32] = {N: [s["results"][init][N]["correlator"] for s in main["samples"]]
                    for N in main["config"]["sizes"] if N in SIZES}
     grid64_path = os.path.join(ex.RESULTS_DIR, "renyi2_swssb_chi64.pkl")
     if os.path.exists(grid64_path):
@@ -123,18 +140,18 @@ def previous_grids() -> dict:
     return out
 
 
-def run_grid() -> dict:
-    """Run every grid job on ex.N_WORKERS processes.
+def run_grid(init: str) -> dict:
+    """Run every grid job for one initial state on ex.N_WORKERS processes.
 
     Output: pickle-ready dict with the grid, the control and the earlier chis.
     """
     os.makedirs(ex.CACHE_DIR, exist_ok=True)
     samples = ex.draw_samples()
-    jobs = build_jobs(samples)
+    jobs = build_jobs(samples, init)
 
     grid = {
         "config": {
-            "epsilon": ex.EPSILON, "chi_max": CHI, "sizes": SIZES, "init": INIT,
+            "epsilon": ex.EPSILON, "chi_max": CHI, "sizes": SIZES, "init": init,
             "n_samples": len(samples), "base_seed": ex.BASE_SEED,
             "cutoff": ex.CUTOFF, "dt_schedule": ex.DT_SCHEDULE,
             "steps_per_dt": ex.STEPS_PER_DT,
@@ -145,11 +162,11 @@ def run_grid() -> dict:
         "descriptions": [s["description"] for s in samples],
         "results": {N: [None] * len(samples) for N in SIZES},
         "control_Lpp0": load_control(),
-        "previous_chi": previous_grids(),
+        "previous_chi": previous_grids(init),
     }
 
     print(f"{len(jobs)} runs queued on {ex.N_WORKERS} workers: "
-          f"{len(samples)} samples x N in {SIZES}, chi={CHI}, init=|{INIT}>.",
+          f"{len(samples)} samples x N in {SIZES}, chi={CHI}, init=|{init}>.",
           flush=True)
     print(f"Watch for '!' (still drifting) and 'NEG' (positivity lost); "
           f"control floor is ~4e-06.\n", flush=True)
@@ -187,6 +204,7 @@ def run_grid() -> dict:
 def summarize(grid: dict) -> None:
     """Print the size-to-size ratios and every convergence flag that fired."""
     n = grid["config"]["n_samples"]
+    print(f"\n=== init |{grid['config']['init']}> ===")
     ratio_label = f"R{SIZES[-1]}/R{SIZES[0]}"
     print(f"\n{'sample':>7} " + " ".join(f"{'R(N=%d)' % N:>12}" for N in SIZES)
           + f" {ratio_label:>9}  flags")
@@ -247,7 +265,8 @@ def plot_grid(grid: dict) -> str:
     ax0.set_xticks(SIZES)
     ax0.grid(True, alpha=0.3)
     ax0.legend(fontsize=8, ncol=2)
-    ax0.set_title(rf"$\chi={grid['config']['chi_max']}$, init $|0\ldots0\rangle$")
+    ax0.set_title(rf"$\chi={grid['config']['chi_max']}$, "
+                  rf"init $|{grid['config']['init']}\rangle$")
 
     ax1.axhline(1.0, ls=":", color="grey", lw=1.5)
     ax1.set_xlabel("system size N")
@@ -258,19 +277,22 @@ def plot_grid(grid: dict) -> str:
 
     fig.suptitle(rf"Genericity of the SWSSB correlator over {n} random $L''$ "
                  rf"($\epsilon={grid['config']['epsilon']}$, "
-                 rf"$\chi={grid['config']['chi_max']}$)")
+                 rf"$\chi={grid['config']['chi_max']}$, "
+                 rf"init $|{grid['config']['init']}\rangle$)")
     fig.tight_layout()
-    path = os.path.join(ex.RESULTS_DIR, "renyi2_swssb_chi128.png")
+    path = os.path.join(
+        ex.RESULTS_DIR, f"renyi2_swssb_chi128{suffix(grid['config']['init'])}.png")
     fig.savefig(path, dpi=150)
     plt.close(fig)
     return path
 
 
-def main() -> None:
-    grid = run_grid()
+def run_one_init(init: str) -> None:
+    """Run, save, summarize and plot the grid for a single initial state."""
+    grid = run_grid(init)
 
     os.makedirs(ex.RESULTS_DIR, exist_ok=True)
-    path = os.path.join(ex.RESULTS_DIR, "renyi2_swssb_chi128.pkl")
+    path = os.path.join(ex.RESULTS_DIR, f"renyi2_swssb_chi128{suffix(init)}.pkl")
     with open(path, "wb") as f:
         pickle.dump(grid, f)
     print(f"\nSaved grid -> {path}", flush=True)
@@ -285,6 +307,17 @@ def main() -> None:
     except Exception:
         print(f"!! plot failed (data is still saved):\n{traceback.format_exc()}",
               flush=True)
+
+
+def main() -> None:
+    """Run the grid for every initial state in INITS, one after the other.
+
+    Anything already cached returns immediately, so re-running after adding an
+    initial state costs only the new work.
+    """
+    for init in INITS:
+        print(f"\n{'='*70}\ninitial state |{init}>\n{'='*70}", flush=True)
+        run_one_init(init)
 
 
 if __name__ == "__main__":
