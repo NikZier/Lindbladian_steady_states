@@ -74,6 +74,29 @@ plateau; showing saturation needs χ=192 or 256 agreeing with χ=128.
 
 ### Trap 2: converged-looking but not relaxed
 
+**Use `residual` for this. It is the only honest convergence test here** —
+r = ‖ℒ|ρ⟩‖ / ‖|ρ⟩‖, which is exactly zero at a steady state of any sector and
+refers to nothing else: not dt, not the initial state, not the schedule. Every
+run computes it (`lindblad_mps/residual.py`, a Liouvillian MPO of bond
+dimension 18 contracted in four layers, a few seconds against runs of hours).
+
+Read it against the **dt² Trotter floor**, not against zero. TEBD converges to
+the fixed point of the *Trotterized* propagator, so a fully relaxed run stops
+at r = C·dt², measured at N=4 as C = 0.0202 across dt ∈ [0.005, 0.1] to three
+digits. A run sitting on its floor has relaxed and is limited only by dt; a run
+orders of magnitude above it has not, however still its observables look. To
+tell them apart, re-run one case at half the final dt: the floor drops 4×, a
+genuinely unrelaxed residual barely moves. Below ~1e-7 the number is arithmetic
+noise (r is a square root of a near-total cancellation between terms of order
+‖ℒ‖²).
+
+**Cached runs from before this existed have `residual = None`, and re-running
+will not fill it in** — the diagnostic changes neither the cache key nor
+`run_config`, so a cached run comes back as it stands. Delete the specific
+cache file to force a recompute.
+
+The rest of this section is why that was needed.
+
 The `converged` field is **not a convergence test** and is retained only for
 continuity with old pickles. It checks `1 − |⟨ρ(t)|ρ(t+dt)⟩| < 1e-6` over *one*
 Trotter step, which shrinks with dt whether or not the state is near the fixed
@@ -119,6 +142,8 @@ of many minutes):
   100 runs, mostly Trotter oscillation rather than genuine drift. The boolean
   should test monotonicity, not magnitude. Until then, treat `!` as "go look at
   `stage_correlators`", not as a verdict.
+- `residual`, `residual_per_bond` — ‖ℒ|ρ⟩‖/‖|ρ⟩‖ and the same divided by the
+  N−1 bond terms. **The convergence test**; see Trap 2 for how to read it.
 - `min_profile`, `positivity_violation` — R = Tr[(AρA)ρ] with A = X_i X_j†
   Hermitian and unitary is a trace of two positive semidefinite matrices, so
   **R ≥ 0 for any physical ρ**. A negative value measures how much positivity
@@ -162,7 +187,36 @@ correlator in the ensemble (13× below sample 6) because its L'' direction
 couples most weakly to the SWSSB channel — which gives both a small R and a
 small Liouvillian gap, hence the slowest relaxation.
 
-**Not yet established.** Any ε other than 0.2. Saturation in χ (see Trap 1).
+**What sets R, and what gaps the Liouvillian.** In particle language (|1⟩ =
+particle) the baseline is diffusion-limited pair annihilation: L takes
+|01⟩ ↔ |10⟩ at amplitude 2 (symmetric hopping, D = 4) and L' = 4|00⟩⟨11| takes
+|11⟩ → |00⟩. That is **A + A → ∅**, which is critical — gap ~ D(π/N)², z = 2 —
+so the *unperturbed* model is gapless in the thermodynamic limit.
+
+A generic L'' on the ZZ commutant has a ⟨11|L''|00⟩ entry: **pair creation**,
+which turns it into A + A ⇌ ∅, a relevant perturbation with a finite-density
+active steady state and a gap of order the creation rate. Measured across the
+ten samples at N=12:
+
+    R = 0.1256 × |<11|L''|00>|²,  spread ±0.9%, ratio ≈ 1/8
+
+with perfect rank correlation. **The SWSSB signal is driven entirely by the
+pair-creation matrix element**, and the under-relaxation follows the same
+quantity (corr(log creation rate, log zero/neel gap) = −0.68): small creation ⇒
+small gap ⇒ slow relaxation ⇒ wide zero/neel straddle. Sample 8 is not a sample
+losing order — it has the smallest creation amplitude in the ensemble
+(0.00177, 12.5× below sample 6) and its R is exactly where that law puts it.
+
+Two consequences. The perturbed Liouvillian is **gapped**, N-independently, so
+an infinite-system method is not facing a gapless generator — but the gap is
+O(ε²) and the ε → 0 limit is singular, recovering the critical baseline. And R
+∝ ε² through |c|² means the signal is leading-order perturbative around the
+dark state, which makes the ε dependence a sharp prediction rather than an open
+grid (see below) and may be analytically derivable — the 1/8 is suspiciously
+round.
+
+**Not yet established.** Any ε other than 0.2 — now with a prediction to test
+against, R ∝ ε², cheap at ε = 0.1 and 0.4. Saturation in χ (see Trap 1).
 N=20 at a schedule long enough to converge — cheap in principle, since bond
 dims sit at 48–72 for most samples, so relaxation and not truncation is the
 bottleneck there (samples 1 and 9 excepted, which need χ > 128).
@@ -184,6 +238,13 @@ lockstep with the discarded weight.
       exact.py        dense reference for small N.
       models.py       the jump operators and random parity-commuting sampling.
       diagnostics.py  convergence diagnostics.
+      residual.py     Liouvillian MPO + ||L|rho>||/|||rho>||, the absolute
+                      steady-state test (see Trap 2). The MPO has bond
+                      dimension r+2 = 18 for this model, so L†L would be 324 —
+                      finite and small, contrary to the usual assumption that
+                      squaring it is non-local. What rules out variational
+                      (L†L) steady-state search here is conditioning, not
+                      locality: gap(L†L) ~ gap(L)² ~ 4e-6 for sample 8.
       blas.py         BLAS thread control — see below.
 
     experiments/

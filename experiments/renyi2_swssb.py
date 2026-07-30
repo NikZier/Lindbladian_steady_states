@@ -71,7 +71,7 @@ import numpy as np
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from lindblad_mps import exact, models, observables, tebd, vectorize
+from lindblad_mps import exact, models, observables, residual, tebd, vectorize
 from lindblad_mps import mps as mps_module
 
 # ---------------------------------------------------------------------------
@@ -211,8 +211,10 @@ def run_steady_state_correlator(
         'max_discarded_weight', 'final_bond_dims', 'converged', 'state' (MPS),
         plus 'stage_correlators' (list of (dt, R) per dt stage), 'stage_drift'
         (relative change in R over the last stage), 'time_converged'
-        (stage_drift < STAGE_DRIFT_TOL), 'min_profile' and
-        'positivity_violation' (see POSITIVITY_TOL).
+        (stage_drift < STAGE_DRIFT_TOL), 'min_profile',
+        'positivity_violation' (see POSITIVITY_TOL), and 'residual' /
+        'residual_per_bond' -- ||L|rho>||/|||rho>||, the absolute convergence
+        test (see lindblad_mps.residual), None if it raised.
     """
     i, j = correlator_sites(N)
     stage_correlators = []
@@ -254,6 +256,20 @@ def run_steady_state_correlator(
 
     min_profile = min([R] + [v for _, v in profile])
 
+    # The absolute convergence test: ||L|rho>|| / |||rho>|| is zero at a steady
+    # state of any sector and says nothing about dt, the initial state or the
+    # schedule -- unlike 'converged' and 'stage_drift', which both measure the
+    # trajectory rather than the state. Read it against the dt^2 Trotter floor
+    # of the final stage, not against zero (see lindblad_mps.residual). Costs a
+    # few seconds at the bond dimensions this study reaches.
+    #
+    # Diagnostics must never cost a run: caught and recorded as None, the same
+    # policy as positivity_violation.
+    try:
+        residual_diag = residual.steady_state_residual(state, [], [], L2_terms, [])
+    except Exception:
+        residual_diag = {}
+
     final_overlap = history["overlap"][-1] if history["overlap"] else float("nan")
     return {
         "N": N,
@@ -272,6 +288,8 @@ def run_steady_state_correlator(
         "time_converged": stage_drift < STAGE_DRIFT_TOL,
         "min_profile": min_profile,
         "positivity_violation": max(0.0, -min_profile) > POSITIVITY_TOL,
+        "residual": residual_diag.get("residual"),
+        "residual_per_bond": residual_diag.get("residual_per_bond"),
         "state": state,
     }
 
@@ -295,8 +313,15 @@ def format_diagnostics(res: dict) -> str:
     if "stage_drift" not in res:
         return f"conv={str(res['converged']):5s}(old)  "
     drift = res["stage_drift"]
+    # Absent on every entry cached before the residual diagnostic existed, and
+    # re-running will not add it: the cache key and run_config are both
+    # unchanged by it, so a cached run is returned as it stands. Delete the
+    # cache file of any specific run you want the residual for.
+    resid = res.get("residual")
+    resid_field = f"res={resid:7.1e} " if resid is not None else " " * 12
     return (f"drift={drift:7.1e}{' ' if res['time_converged'] else '!'}"
-            f"{'NEG ' if res['positivity_violation'] else '    '}")
+            f"{'NEG ' if res['positivity_violation'] else '    '}"
+            f"{resid_field}")
 
 
 # ---------------------------------------------------------------------------
