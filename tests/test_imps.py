@@ -481,3 +481,66 @@ class TestCorrelatorProfileExactCases:
         profile = iobservables.correlator_profile(state, models.Z, r_max=10)
         for r, v in profile:
             assert abs(v - 1.0) < 1e-10, f"r={r}: {v}"
+
+
+class TestArpackDeterminism:
+    """iTEBD must not depend on the global RNG, on process identity, or on how
+    many ARPACK calls preceded it.
+
+    Before leading_eigenpairs passed an explicit v0, scipy let ARPACK generate
+    its own start vector from an internal Fortran RNG that np.random.seed()
+    cannot reach and whose state persists across calls within a process. Under
+    multiprocessing that made results depend on pool scheduling: identical
+    settings produced a steady state with purity 0.808264 (physical) or
+    1.246957 (not a density matrix), switching as a discrete jump mid-run.
+
+    These tests would catch a regression that removed v0, or that drew it from
+    the global RNG (which a caller's np.random.seed would then perturb).
+    """
+
+    def _transfer_op(self, state):
+        return imps.build_transfer_operator(imps.theta_pair(state, "A"), transpose=False)
+
+    def test_leading_eigenpairs_unaffected_by_global_seed(self):
+        """Same operator, different global RNG state -> bit-identical eigenpairs."""
+        L2 = [(op, 1.0) for op in models.baseline_jump_operators()]
+        state, _ = itebd.find_steady_state_infinite(
+            H2_terms=[], H1_terms=[], L2_terms=L2, L1_terms=[],
+            dt_schedule=[0.1] * 3, steps_per_dt=5, chi_max=16, cutoff=1e-10,
+            canonicalize_every=2,
+            initial_state=imps.iMPS.pure_product_state(KET0, KET1))
+        op = self._transfer_op(state)
+        if op.shape[0] <= 100:
+            pytest.skip("dense path taken; ARPACK not exercised at this chi")
+
+        np.random.seed(1)
+        vals_a, _ = imps.leading_eigenpairs(op, k=2)
+        np.random.seed(999)
+        _ = np.random.standard_normal(5000)          # churn the global RNG
+        vals_b, _ = imps.leading_eigenpairs(op, k=2)
+        assert np.allclose(vals_a, vals_b, rtol=0, atol=0), (
+            f"ARPACK results moved with the global RNG: {vals_a} vs {vals_b}")
+
+    def test_evolution_reproducible_under_different_global_seeds(self):
+        """The physically meaningful check: the STATE is identical.
+
+        Compares the Schmidt spectrum, which is gauge-invariant -- a gauge
+        change cannot alter it, so equality here means the same physical state
+        and not merely the same numbers in the same basis.
+        """
+        L2 = [(op, 1.0) for op in models.baseline_jump_operators()]
+
+        def run(seed):
+            np.random.seed(seed)
+            state, _ = itebd.find_steady_state_infinite(
+                H2_terms=[], H1_terms=[], L2_terms=L2, L1_terms=[],
+                dt_schedule=[0.1] * 4 + [0.05] * 2, steps_per_dt=5,
+                chi_max=16, cutoff=1e-10, canonicalize_every=2,
+                initial_state=imps.iMPS.pure_product_state(KET0, KET1))
+            return np.sort(state.Lambda["A"])[::-1], np.sort(state.Lambda["B"])[::-1]
+
+        a_A, a_B = run(0)
+        b_A, b_B = run(12345)
+        assert len(a_A) == len(b_A) and len(a_B) == len(b_B)
+        assert np.allclose(a_A, b_A, rtol=0, atol=1e-13), "Lambda_A differs across seeds"
+        assert np.allclose(a_B, b_B, rtol=0, atol=1e-13), "Lambda_B differs across seeds"

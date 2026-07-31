@@ -43,7 +43,7 @@ same R from either, so where they agree the value is converged from two
 directions, and where they split the pair brackets the truth. Both are now run
 on the full grid — see below.
 
-## ⚠️ Two traps, and both have inverted a conclusion here
+## ⚠️ Three traps, and each has inverted a conclusion here
 
 ### Trap 1: χ-limited vs cutoff-limited
 
@@ -127,6 +127,61 @@ Two corollaries that run against instinct:
   at χ=32 (9.0e-07) at N=16, because the true answer is a bond-dimension-1
   product state and hard truncation shoves the state toward it for the wrong
   reason.
+
+### Trap 3: the infinite-system steady state is not always a density matrix
+
+Nothing in the vectorized iTEBD constrains ρ to be positive. Measured on the
+true 8-site reduced density matrix of the infinite chain
+(`experiments/imps_positivity_hermiticity.py`, ε=0.2, χ=128, |neel⟩):
+
+| | samples 0–6 | **samples 7, 8, 9** |
+|---|---|---|
+| λ_min | +1e-14 … +3e-12 | **−1.80e-2, −1.15e-2, −3.79e-2** |
+| purity | 0.564 … 0.753 | **1.293, 1.186, 1.626** |
+| negative weight | 0 | **11.2%, 7.8%, 18.8%** |
+
+Purity above 1 is impossible for a density matrix. For samples 7, 8, 9 the
+converged state is genuinely not one — reproducibly, and the defect grows with
+window size. Hermiticity is fine everywhere (worst 8e-06, most at 1e-14).
+
+**R is unaffected.** Tracked through runs that landed on either branch, R is
+identical to seven digits — sample 4 gave 1.304313e-03 with purity 0.808264
+*and* with purity 1.246957, drift −0.09% in both. So the factor
+R_iTEBD = 1.9875 × the finite-N law is not caused by non-positivity: samples
+0–6 are genuine density matrices and show the same factor (1.9842–1.9891) as
+7, 8, 9 (1.9919, 1.9913, 1.9854).
+
+#### The bug this hid behind — do not reintroduce it
+
+Until 2026-07-31 this was *not* reproducible: successive runs disagreed about
+which samples were physical (one pass said "sample 0 only", the next swapped
+it to sample 6, a 30-run pass reported 20/30). That was **not** physics.
+
+`leading_eigenpairs` called `scipy.sparse.linalg.eigs()` with no `v0`, so
+ARPACK generated its own start vector from an internal Fortran RNG that
+`np.random.seed()` cannot reach and whose state persists within a process
+across calls. Under multiprocessing the outcome therefore tracked **pool
+scheduling** — how many jobs a worker had already handled. `canonicalize()`
+truncates, so a different eigenvector on a near-degenerate transfer spectrum
+gives a different truncation and the evolution forks.
+
+The signature that identified it: purity did not *drift*, it **jumped**
+(sample 4, by thirds: 0.807812 → 1.246957 → 1.246957) and was stationary on
+both sides of the jump, while R stayed put. Only tracking an absolute quantity
+*through* a run rather than at the end exposed this.
+
+Fixed by a deterministic `v0` (`imps.ARPACK_V0_SEED`), with regression tests in
+`tests/test_imps.py::TestArpackDeterminism` — one on `leading_eigenpairs`
+under a churned global RNG, one comparing gauge-invariant Schmidt spectra
+across a full evolution. Repeats now agree to 0.00e+00 in both R and purity.
+
+**Retracted with it:** an earlier claim that the stationary manifold contains
+*physical* members with different R, based on sample 3 returning 5.279e-03
+against 1.976e-03. That does not reproduce — three checked runs give
+1.975851/1.975898/1.975851e-03 at ~0.15% drift, matching production. It came
+from a run whose convergence had never been checked, because this script
+records no drift diagnostics. **Do not quote an absolute quantity from a run
+without one.**
 
 ## Diagnostics every run reports
 
@@ -215,8 +270,7 @@ dark state, which makes the ε dependence a sharp prediction rather than an open
 grid (see below) and may be analytically derivable — the 1/8 is suspiciously
 round.
 
-**Not yet established.** Any ε other than 0.2 — now with a prediction to test
-against, R ∝ ε², cheap at ε = 0.1 and 0.4. Saturation in χ (see Trap 1).
+**Not yet established.** Saturation in χ (see Trap 1).
 N=20 at a schedule long enough to converge — cheap in principle, since bond
 dims sit at 48–72 for most samples, so relaxation and not truncation is the
 bottleneck there (samples 1 and 9 excepted, which need χ > 128).
@@ -224,6 +278,92 @@ bottleneck there (samples 1 and 9 excepted, which need χ > 128).
 The `zero`-vs-`neel` differences seen at χ=32 (up to 16% at N=20) are
 **numerical** — exactly 0.0% at N=4 where truncation is exact, growing in
 lockstep with the discarded weight.
+
+## The infinite system (iTEBD)
+
+`experiments/imps_eps_init_grids.py`, χ=128, |neel⟩ unless stated. Bond
+dimension never binds: it peaks at 29 at ε=0.2 and falls to **7–12 at
+ε=0.05**, because small ε sits closer to the dark state. Small-ε runs are
+therefore *cheaper per unit time*, not more expensive — the ε=0.05 grid
+(47040 units × 10 samples) cost about the same wall clock as the ε=0.2 one.
+
+**Established in the thermodynamic limit:**
+
+- **R is flat in separation.** Sample 8 at 15015 units: R varies by 0.0001%
+  over r = 20…100, R(100)/R(1) = 1.000462. This is the SWSSB long-range-order
+  signature, with no finite-size caveat.
+- **R is independent of the initial state.** All 10 samples agree between
+  |0…0⟩ and |neel⟩ to ≤0.2%, eight of ten to 0.0%. Sample 8 reads
+  R = 4.4348e-04 from *both* — five digits, from opposite directions.
+- **R ∝ ε², over a 4× range in ε (16× in R), to ~0.1%:**
+
+  | ε | predicted R(ε)/R(0.2) | measured | spread |
+  |---|---|---|---|
+  | 0.15 | 0.5625 | 0.56290 ± 0.00040 | 0.07% |
+  | 0.10 | 0.2500 | 0.25027 ± 0.00023 | 0.09% |
+  | 0.05 | 0.0625 | 0.06259 ± 0.00007 | 0.12% |
+
+  There is a systematic **+0.11–0.14% excess** at all three ε, too consistent
+  to be scatter; most likely a small bias in the ε=0.2 reference rather than a
+  higher-order term in ε, but not chased down.
+
+**Schedule length scales as 1/ε², and this is load-bearing.** τ ~ 1/gap and
+gap ~ pair-creation rate ~ ε², so a fixed schedule gives *less* relaxation at
+smaller ε. Schedules are (0.2/ε)² × the ε=0.2 ones. Verified by control runs
+at 5× extra length: sample 8 at ε=0.05 gives 2.7717e-05 at 240240 units vs
+2.7714e-05 at 47040, and at ε=0.1 the two agree exactly — so the rule is
+conservative, not marginal.
+
+**Per-sample relaxation times cannot be extracted from these trajectories.**
+Two estimators were tried and both failed: "last excursion beyond 1% of the
+final value" gave τ(0.15)/τ(0.2) ∈ [0.33, 12.5], and a single-exponential fit
+to the smoothed approach gave [0.14, 20] against a predicted 1.78; τ·rate is
+not constant either. The fitting window dominates. Scale the *schedules known
+to have converged* (drift ≈ 0% by thirds) instead of any fitted τ.
+
+**The unexplained factor of 2.** R_iTEBD = **1.9875 ± 0.0025** × the finite-N
+law R = 0.1256·|⟨11|L''|00⟩|², across all ten samples — spread 0.12%. A
+constant that tight over ten independent L'' draws is structural. Ruled out
+so far:
+
+- *measurement* — tiling the infinite state and measuring with the ED-validated
+  finite routine gives ratio 1.000;
+- *finite-size reference* — R is converged to 1.4–8.9% across N=12/16/20, and
+  exact ED at N=4 (2.7722e-03) and N=8 (2.78733e-03) agree to 0.5%, so the
+  finite answer is genuinely N-independent;
+- *positivity* — samples 0–6 converge to genuine density matrices and show the
+  same factor as 7, 8, 9 which do not; and a single sample gives R identical to
+  7 digits on both branches (see Trap 3);
+- *bond dimension* — identical to five digits across χ ∈ {16, 32, 64};
+- *convergence* — sample 8 was the one apparent outlier (1.86×) and joined the
+  pack at 1.9913 once run 5× longer.
+
+Localized to the **denominator**: the R numerator agrees with exact dynamics
+to 4.4% while the purity ratio is 0.531. Exact N=8 purity is 0.926622.
+
+Two candidate explanations have been tried and **both are dead**:
+
+1. *"ρ is an equal mixture of two orthogonal states that A = XᵢXⱼ† maps into
+   each other"* — would give purity/2, unchanged numerator, R×2. **Dead:** A
+   contains two X's, so it commutes with P = ΠZ and cannot change charge
+   sector. The cross term Tr[ρ₁Aρ₂†A†] then vanishes and both numerator and
+   purity halve, leaving R *unchanged*.
+2. *"the transfer matrix has two dominant eigenvectors"* — **Dead:** measured
+   densely (not ARPACK, whose random start vector is unreliable for
+   near-degenerate spectra here). The leading eigenvalue is **simple** in
+   every sample tested; nothing sits within 0.1% of it.
+
+What the dense spectrum *did* show, for the record: samples 0 and 4 carry a
+cluster of three near-unit eigenvalues (a complex-conjugate pair plus one
+real, 0.4% and 1.8% below η₁ — suggestively the four (q_L, q_R) blocks),
+while sample 6 has a clean gap (η₂ = 0.223) and the *same* factor. The
+symmetry-twisted transfer matrices are the one uniform quantity: |η₁| =
+0.9945–0.9987 under both P·ρ and ρ·P, identical to 10 digits between them, in
+every sample including sample 6.
+
+⚠️ `iMPS.canonicalize()` does **not** truncate by default, so calling it on a
+χ=32 state can regauge it up to bond dimension ~84 (exact, but the transfer
+operator becomes 7056×7056). Pass `chi_max` if size matters.
 
 ## Layout
 
@@ -246,6 +386,27 @@ lockstep with the discarded weight.
                       (L†L) steady-state search here is conditioning, not
                       locality: gap(L†L) ~ gap(L)² ~ 4e-6 for sample 8.
       blas.py         BLAS thread control — see below.
+      imps.py         infinite MPS (2-site unit cell, Vidal Γ-Λ form),
+                      Orús-Vidal canonicalization via transfer-matrix fixed
+                      points. Read its module docstring before touching
+                      canonicalize(): four separate gauge bugs were found and
+                      fixed there, and product-state tests cannot catch any of
+                      them (at bond dimension 1 every Λ-weighting is equivalent).
+      itebd.py        infinite-system Trotter driver.
+      iobservables.py Renyi-2 profile + correlation length for an iMPS. The
+                      forward sweep MUST use LEFT-weighted tensors and a
+                      Λ_right² closure; getting it wrong silently fabricates an
+                      exponential decay out of a flat correlator. Environments
+                      are rescaled by a shared factor each step — exactly
+                      ratio-preserving, and required: 100 unrenormalized
+                      transfer steps overflow float64 when the state is far
+                      from canonical mid-anneal, poisoning precisely the
+                      large-r values the SWSSB claim rests on.
+      ilpdo.py        locally-purified (ρ = XX†) ansatz, positive by
+                      construction. Built to test the positivity hypothesis for
+                      the factor of 2; that hypothesis is now dead, so this is
+                      unused by the production path.
+      itebd_lpdo.py   Trotter driver for the LPDO ansatz.
 
     experiments/
       renyi2_swssb.py            main study (ε=0.2, N ∈ {4..20}, χ=32) and the
@@ -255,12 +416,37 @@ lockstep with the discarded weight.
       renyi2_swssb_chi128.py     **the headline run** — 10 samples × 5 sizes ×
                                  both initial states at χ=128
       renyi2_swssb_profiles.py   re-plots from the pickles, runs no TEBD
+      imps_eps_init_grids.py     **the infinite-system study** — the ε sweep
+                                 {0.2, 0.15, 0.1, 0.05}, both initial states,
+                                 and the long-schedule convergence controls.
+                                 Grids are declared in one GRIDS dict; ε lives
+                                 in run_config because the cache key cannot
+                                 express it, and SUPERSEDES routes a sample to
+                                 its longer re-run where one exists.
       results/                   pickles + PNGs, and _cache/ (see below)
 
-Figures worth knowing: `renyi2_swssb_size_scaling[_neel].png` (R vs N, all
-samples, with the χ=32 curves behind for contrast), `renyi2_swssb_n20_profiles
-[_neel].png` (full R(i,r)), `renyi2_swssb_init_comparison.png` (the uniqueness
-test), `renyi2_swssb_chi_extended.png` (χ sweep + per-sample bond dims).
+Figures worth knowing — finite: `renyi2_swssb_size_scaling[_neel].png` (R vs N,
+all samples, with the χ=32 curves behind for contrast), `renyi2_swssb_n20_
+profiles[_neel].png` (full R(i,r)), `renyi2_swssb_init_comparison.png` (the
+uniqueness test), `renyi2_swssb_chi_extended.png` (χ sweep + per-sample bond
+dims). Infinite: `imps_finite_vs_infinite.png` (finite N vs the thermodynamic
+limit, infinite point on its own broken axis), `imps_correlator_vs_epsilon.png`
+(R vs ε with a FREE-exponent power-law fit — p = 1.99909 ± 0.00077),
+`imps_trajectories_all.png` (every sample × every ε, raw), and
+`imps_positivity_hermiticity.png`.
+
+**Deleted 07-31, do not resurrect from old pickles.** Everything produced by
+the pre-fix iTEBD — before the correlator Λ-weighting and canonicalize gauge
+bugs were found — was removed, because those figures show a spurious
+exponential decay and violent oscillation that is entirely measurement
+artifact: `imps_swssb_infinite[_longrun]`, `imps_sample8_timescale[_long]`,
+`imps_sample8_rolling_average`, plus `imps_all10_samples_neel_summary` and
+`imps_all10_r50_r100_shared_axis`, which were re-plots made *before* their own
+source pickles were re-run. Also removed: `imps_projected_measurement`, which
+benchmarked the positivity-projection/LPDO route that the factor-of-2
+investigation has since refuted. The surviving `allsamplests` cache is
+post-fix, independently confirmed by its |neel⟩ values matching the
+separately-computed |zero⟩ runs to five digits.
 
 ## Running things
 

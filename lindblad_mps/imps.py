@@ -289,14 +289,49 @@ def build_transfer_operator(
     return LinearOperator((chi * chi, chi * chi), matvec=matvec, dtype=complex)
 
 
+ARPACK_V0_SEED = 20250731  # fixed: see leading_eigenpairs' determinism note
+
+
+def _deterministic_v0(n: int) -> np.ndarray:
+    """A fixed, operator-independent ARPACK start vector.
+
+    Drawn from a LOCAL RandomState rather than the global numpy RNG, so it is
+    unaffected by (and does not perturb) any seeding the caller does. Complex
+    and generic, so it has probability zero of being orthogonal to the
+    dominant eigenvector -- unlike an all-ones vector, which can be.
+    """
+    rng = np.random.RandomState(ARPACK_V0_SEED)
+    v0 = rng.standard_normal(n) + 1j * rng.standard_normal(n)
+    return v0 / np.linalg.norm(v0)
+
+
 def leading_eigenpairs(
     op: LinearOperator,
     k: int = 2,
     dense_threshold: int = 100,
     tol: float = 1e-12,
     maxiter: int = 2000,
+    v0: np.ndarray | None = None,
 ) -> tuple[np.ndarray, np.ndarray]:
     """Dominant k eigenpairs of a transfer LinearOperator, by descending |eigenvalue|.
+
+    Determinism (this is load-bearing -- read before removing v0)
+    -------------------------------------------------------------
+    ARPACK is called with an EXPLICIT start vector. Without one,
+    scipy.sparse.linalg.eigs lets ARPACK generate its own from an internal
+    Fortran RNG that np.random.seed() does not reach, and whose state persists
+    within a process across calls. Under multiprocessing that made results
+    depend on how many jobs a worker had already handled, i.e. on pool
+    scheduling.
+
+    That was not cosmetic. canonicalize() truncates, so a different eigenvector
+    on a near-degenerate transfer spectrum gives a different truncation, and
+    the evolution forks. Measured before this fix: identical settings gave a
+    steady state with purity 0.808264 (positive, physical) or 1.246957
+    (negative eigenvalues, not a density matrix), the switch appearing as a
+    DISCRETE jump mid-run after which the state was stationary again. R was
+    unaffected -- 1.3043e-03 either way, to seven digits -- so the correlator
+    results never depended on this, but any absolute quantity did.
 
     Below dense_threshold (op.shape[0], i.e. chi**2 ~ chi <~ 10), builds the
     matrix explicitly (matvec against each standard basis vector -- cheap at
@@ -315,7 +350,9 @@ def leading_eigenpairs(
     falling back to the dense path.
 
     Input: op; k, number of eigenpairs wanted; dense_threshold; tol, maxiter:
-        ARPACK convergence controls.
+        ARPACK convergence controls; v0, explicit start vector (defaults to a
+        fixed deterministic one -- pass your own only to probe start-vector
+        sensitivity, never in production).
     Output: (eigenvalues, eigenvectors) -- eigenvectors as columns (each
         reshape-able to (chi, chi) via .reshape(chi, chi)), sorted by
         descending |eigenvalue|. May return fewer than k pairs if op is too
@@ -335,13 +372,15 @@ def leading_eigenpairs(
 
     k_eff = min(k, n - 2)
     ncv = min(n, max(4 * k_eff + 1, 20))
+    start = _deterministic_v0(n) if v0 is None else v0
     try:
-        vals, vecs = eigs(op, k=k_eff, which="LM", tol=tol, maxiter=maxiter, ncv=ncv)
+        vals, vecs = eigs(op, k=k_eff, which="LM", tol=tol, maxiter=maxiter,
+                          ncv=ncv, v0=start)
     except ArpackNoConvergence:
         try:
             vals, vecs = eigs(
                 op, k=k_eff, which="LM", tol=tol, maxiter=maxiter * 5,
-                ncv=min(n, max(8 * k_eff + 1, 40)),
+                ncv=min(n, max(8 * k_eff + 1, 40)), v0=start,
             )
         except ArpackNoConvergence:
             return _dense_fallback(k)

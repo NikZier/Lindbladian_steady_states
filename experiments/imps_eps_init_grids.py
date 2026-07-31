@@ -107,6 +107,29 @@ SCHEDULE_EPS015LONG = [0.1] * 5000 + [0.05] * 530 + [0.02] * 350 + [0.01] * 180 
 # redoing rather than quoting.
 ZERO_SLOW = [3, 7, 8]
 
+
+def scale_schedule(schedule: list[float], factor: int) -> list[float]:
+    """Repeat each dt stage `factor` times: same dt anneal, `factor` x the time.
+
+    Lengthening by adding stages (rather than by raising steps_per_dt or
+    coarsening dt) keeps the dt annealing profile identical, so the Trotter
+    floor at the end of the run -- r = 0.0202 dt^2 -- is unchanged and the
+    longer runs remain directly comparable to the shorter ones.
+    """
+    out: list[float] = []
+    for dt in schedule:
+        out.extend([dt] * factor)
+    return out
+
+
+# tau ~ 1/gap ~ 1/epsilon^2, so relative to epsilon=0.2:
+#   epsilon=0.10 -> (0.2/0.10)^2 =  4x
+#   epsilon=0.05 -> (0.2/0.05)^2 = 16x
+SCHEDULE_EPS010 = scale_schedule(SCHEDULE_BASE, 4)        # 11760 units
+SCHEDULE_EPS005 = scale_schedule(SCHEDULE_BASE, 16)       # 47040 units
+SCHEDULE_EPS010LONG = scale_schedule(SCHEDULE_S8LONG, 4)  # 60060 units
+SCHEDULE_EPS005LONG = scale_schedule(SCHEDULE_S8LONG, 16)  # 240240 units
+
 GRIDS = {
     "s8long":    {"epsilon": 0.20, "init": "neel", "samples": [8],
                   "schedule": SCHEDULE_S8LONG},
@@ -119,6 +142,17 @@ GRIDS = {
                    "schedule": SCHEDULE_S8LONG},
     "eps015long": {"epsilon": 0.15, "init": "neel", "samples": [8],
                    "schedule": SCHEDULE_EPS015LONG},
+    # --- the epsilon sweep: R ~ epsilon^2 over a 4x range in epsilon, i.e.
+    #     16x in R. Sample 8 takes the long schedule from the start, being the
+    #     only sample that needed it at BOTH 0.2 and 0.15.
+    "eps010neel": {"epsilon": 0.10, "init": "neel", "samples": ALL_SAMPLES,
+                   "schedule": SCHEDULE_EPS010},
+    "eps010long": {"epsilon": 0.10, "init": "neel", "samples": [8],
+                   "schedule": SCHEDULE_EPS010LONG},
+    "eps005neel": {"epsilon": 0.05, "init": "neel", "samples": ALL_SAMPLES,
+                   "schedule": SCHEDULE_EPS005},
+    "eps005long": {"epsilon": 0.05, "init": "neel", "samples": [8],
+                   "schedule": SCHEDULE_EPS005LONG},
 }
 
 # Where a sample was run twice, the longer schedule supersedes the shorter.
@@ -127,6 +161,28 @@ GRIDS = {
 # 15015-unit value (4.4365e-04) sits at 1.991x, exactly with the other nine.
 SUPERSEDES = {("eps02zero", s): ("zerolong", s) for s in ZERO_SLOW}
 SUPERSEDES[("eps015neel", 8)] = ("eps015long", 8)
+SUPERSEDES[("eps010neel", 8)] = ("eps010long", 8)
+SUPERSEDES[("eps005neel", 8)] = ("eps005long", 8)
+
+# Every epsilon in the sweep, against the epsilon=0.2 reference.
+EPS_GRID_KINDS = {0.15: "eps015neel", 0.10: "eps010neel", 0.05: "eps005neel"}
+
+# Record ~1000 trajectory points regardless of schedule length. The stage
+# callback measures a 100-point correlator profile AND an Arnoldi correlation
+# length, ~0.1-0.2 s; at 55360 stages (epsilon=0.05, sample 8) measuring every
+# stage would cost hours of pure diagnostics on top of the evolution. The
+# threshold keeps every schedule run so far at every-stage sampling, so
+# existing trajectories stay exactly as they were.
+MEASURE_TARGET_POINTS = 1000
+MEASURE_EVERY_THRESHOLD = 4000
+
+
+def measure_every(schedule: list[float]) -> int:
+    """Stage-sampling stride, a pure function of the schedule (hence of run_config)."""
+    n = len(schedule)
+    if n <= MEASURE_EVERY_THRESHOLD:
+        return 1
+    return max(1, n // MEASURE_TARGET_POINTS)
 ROLLING_WINDOW = 200.0
 PREDICTED_EPS_RATIO = (0.15 / 0.20) ** 2  # 0.5625
 
@@ -182,7 +238,12 @@ def run_one(job: dict) -> dict:
     trajectory: list[dict] = []
     times = elapsed_times(job["schedule"], STEPS_PER_DT)
 
+    stride = measure_every(job["schedule"])
+    last_stage = len(job["schedule"]) - 1
+
     def stage_callback(stage: int, dt: float, state) -> None:
+        if stage % stride and stage != last_stage:
+            return
         prof_map = dict(iobservables.correlator_profile(state, models.X, r_max=max(REFERENCE_R)))
         xi_diag = iobservables.correlation_length(state)
         trajectory.append({
@@ -398,37 +459,46 @@ def report_law(results: dict) -> None:
 def report_eps015(results: dict) -> None:
     """Test R(0.15)/R(0.2) = 0.5625 sample by sample."""
     base = load_neel_eps02(results)
-    print(f"\n{'='*88}\nepsilon = 0.15 vs 0.20, |neel>: prediction R ~ epsilon^2 "
-          f"=> ratio {PREDICTED_EPS_RATIO:.4f}\n{'='*88}")
-    print(f"{'s':>2} {'R(eps=0.20)':>13} {'R(eps=0.15)':>13} {'ratio':>8} "
-          f"{'vs 0.5625':>10}  {'drift(3rds)':>11}")
-    ratios = []
-    for s in ALL_SAMPLES:
-        r15 = pick(results, "eps015neel", s)
-        if r15 is None or s not in base:
-            continue
-        v15, v20 = plateau(r15["trajectory"], 100), plateau(base[s]["trajectory"], 100)
-        th = median_by_thirds(r15["trajectory"], 100)
-        drift = (th[2] / th[0] - 1) if th[0] else float("nan")
-        ratio = v15 / v20 if v20 else float("nan")
-        ratios.append(ratio)
-        print(f"{s:>2} {v20:>13.4e} {v15:>13.4e} {ratio:>8.4f} "
-              f"{ratio/PREDICTED_EPS_RATIO:>9.3f}x {drift:>+10.0%}")
-    if ratios:
-        a = np.array(ratios)
-        print(f"\nmean ratio {a.mean():.4f} +- {a.std():.4f}  "
-              f"(predicted {PREDICTED_EPS_RATIO:.4f}, "
-              f"mean/predicted = {a.mean()/PREDICTED_EPS_RATIO:.3f})")
-
     plt = ex._mpl()
-    fig, ax = plt.subplots(figsize=(7, 5))
-    xs = [s for s in ALL_SAMPLES if pick(results, "eps015neel", s) and s in base]
-    ax.plot(xs, ratios, "o", ms=9, color="tab:red", label="measured $R(0.15)/R(0.2)$")
-    ax.axhline(PREDICTED_EPS_RATIO, color="black", ls="--", lw=1.6,
-               label=rf"predicted $(0.15/0.2)^2={PREDICTED_EPS_RATIO:.4f}$")
-    ax.set_xlabel("sample"); ax.set_ylabel("ratio")
+    fig, ax = plt.subplots(figsize=(7.5, 5.5))
+    colors = {0.15: "tab:red", 0.10: "tab:blue", 0.05: "tab:green"}
+
+    for eps, kind in sorted(EPS_GRID_KINDS.items(), reverse=True):
+        predicted = (eps / 0.20) ** 2
+        rows = []
+        for s in ALL_SAMPLES:
+            r_eps = pick(results, kind, s)
+            if r_eps is None or s not in base:
+                continue
+            v, v20 = plateau(r_eps["trajectory"], 100), plateau(base[s]["trajectory"], 100)
+            th = median_by_thirds(r_eps["trajectory"], 100)
+            rows.append((s, v20, v, v / v20 if v20 else float("nan"),
+                         (th[2] / th[0] - 1) if th[0] else float("nan")))
+        if not rows:
+            continue
+
+        print(f"\n{'='*88}\nepsilon = {eps} vs 0.20, |neel>: prediction R ~ epsilon^2 "
+              f"=> ratio {predicted:.4f}\n{'='*88}")
+        print(f"{'s':>2} {'R(eps=0.20)':>13} {f'R(eps={eps})':>14} {'ratio':>9} "
+              f"{'vs pred':>9}  {'drift(3rds)':>11}")
+        for s, v20, v, ratio, drift in rows:
+            print(f"{s:>2} {v20:>13.4e} {v:>14.4e} {ratio:>9.5f} "
+                  f"{ratio/predicted:>8.3f}x {drift:>+10.0%}")
+        a = np.array([r[3] for r in rows])
+        print(f"\nmean ratio {a.mean():.5f} +- {a.std():.5f}  (predicted {predicted:.4f}, "
+              f"mean/predicted = {a.mean()/predicted:.4f}, spread {a.std()/a.mean():.2%})")
+
+        # Plot ratio NORMALIZED to its own prediction, so all three epsilons
+        # share one axis at 1.0 -- otherwise 0.5625 and 0.0625 cannot be
+        # compared by eye and the small-epsilon scatter is invisible.
+        ax.plot([r[0] for r in rows], a / predicted, "o", ms=8, color=colors.get(eps),
+                label=rf"$\epsilon={eps}$ (predicted {predicted:.4f})")
+
+    ax.axhline(1.0, color="black", ls="--", lw=1.6, label=r"exact $\epsilon^2$ scaling")
+    ax.set_xlabel("sample")
+    ax.set_ylabel(r"measured ratio $/\ (\epsilon/0.2)^2$")
     ax.set_title(r"Testing $R \propto \epsilon^2$ in the thermodynamic limit ($r=100$)")
-    ax.grid(True, alpha=0.3); ax.legend()
+    ax.grid(True, alpha=0.3); ax.legend(fontsize=8)
     fig.tight_layout()
     p = os.path.join(ex.RESULTS_DIR, "imps_eps015_prediction.png")
     fig.savefig(p, dpi=150); plt.close(fig)
