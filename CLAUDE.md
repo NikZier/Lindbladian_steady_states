@@ -253,10 +253,28 @@ which turns it into A + A ⇌ ∅, a relevant perturbation with a finite-density
 active steady state and a gap of order the creation rate. Measured across the
 ten samples at N=12:
 
-    R = 0.1256 × |<11|L''|00>|²,  spread ±0.9%, ratio ≈ 1/8
+    R = q/8 exactly,   q ≡ |<11|L''|00>|²
 
-with perfect rank correlation. **The SWSSB signal is driven entirely by the
-pair-creation matrix element**, and the under-relaxation follows the same
+**This is now an analytic result** (user's derivation, 2026-08-04), not a fit.
+Measured R/q at χ=128, ε=0.2, over the ten samples — `zero` and `neel` agree to
+every digit shown up to N=12:
+
+| N | R/q | vs 1/8 | spread |
+|---|-----|--------|--------|
+| **4** (exact) | **0.125149** | **+0.12%** | 0.23% |
+| 8 | 0.125431 | +0.35% | 0.32% |
+| 12 | 0.125927 | +0.74% | 0.48% |
+| 16 | 0.126303 | +1.04% | 1.6% |
+| 20 | 0.123282 | −1.37% | 5.4% |
+
+The old fitted constant 0.1256 was calibrated at N=12 and carries that row's
++0.7% finite-size drift; **quote 1/8, not 0.1256**. N=4 is truncation-free and
+sits 0.12% above 1/8 at ε=0.2, the same size as the O(ε²) correction seen in
+the infinite system (below), so the residual is a higher-order term in ε rather
+than an error in the law. The N=20 row is under-relaxation, not physics.
+
+The rank correlation with q is perfect. **The SWSSB signal is driven entirely by
+the pair-creation matrix element**, and the under-relaxation follows the same
 quantity (corr(log creation rate, log zero/neel gap) = −0.68): small creation ⇒
 small gap ⇒ slow relaxation ⇒ wide zero/neel straddle. Sample 8 is not a sample
 losing order — it has the smallest creation amplitude in the ensemble
@@ -267,8 +285,7 @@ an infinite-system method is not facing a gapless generator — but the gap is
 O(ε²) and the ε → 0 limit is singular, recovering the critical baseline. And R
 ∝ ε² through |c|² means the signal is leading-order perturbative around the
 dark state, which makes the ε dependence a sharp prediction rather than an open
-grid (see below) and may be analytically derivable — the 1/8 is suspiciously
-round.
+grid (see below). The 1/8 was suspiciously round because it is exact.
 
 **Not yet established.** Saturation in χ (see Trap 1).
 N=20 at a schedule long enough to converge — cheap in principle, since bond
@@ -303,9 +320,9 @@ therefore *cheaper per unit time*, not more expensive — the ε=0.05 grid
   | 0.10 | 0.2500 | 0.25027 ± 0.00023 | 0.09% |
   | 0.05 | 0.0625 | 0.06259 ± 0.00007 | 0.12% |
 
-  There is a systematic **+0.11–0.14% excess** at all three ε, too consistent
-  to be scatter; most likely a small bias in the ε=0.2 reference rather than a
-  higher-order term in ε, but not chased down.
+  The systematic **+0.11–0.14% excess** at all three ε is **explained**: it is
+  a bias in the ε=0.2 *reference*, which is itself 0.146% below the exact law
+  (see "R = q/4, settled" below). Divide out and the excess is gone.
 
 **Schedule length scales as 1/ε², and this is load-bearing.** τ ~ 1/gap and
 gap ~ pair-creation rate ~ ε², so a fixed schedule gives *less* relaxation at
@@ -321,45 +338,52 @@ to the smoothed approach gave [0.14, 20] against a predicted 1.78; τ·rate is
 not constant either. The fitting window dominates. Scale the *schedules known
 to have converged* (drift ≈ 0% by thirds) instead of any fitted τ.
 
-**The unexplained factor of 2.** R_iTEBD = **1.9875 ± 0.0025** × the finite-N
-law R = 0.1256·|⟨11|L''|00⟩|², across all ten samples — spread 0.12%. A
-constant that tight over ten independent L'' draws is structural. Ruled out
-so far:
+**R = q/4, settled.** ✅ The infinite-system correlator is
 
-- *measurement* — tiling the infinite state and measuring with the ED-validated
-  finite routine gives ratio 1.000;
-- *finite-size reference* — R is converged to 1.4–8.9% across N=12/16/20, and
-  exact ED at N=4 (2.7722e-03) and N=8 (2.78733e-03) agree to 0.5%, so the
-  finite answer is genuinely N-independent;
-- *positivity* — samples 0–6 converge to genuine density matrices and show the
-  same factor as 7, 8, 9 which do not; and a single sample gives R identical to
-  7 digits on both branches (see Trap 3);
-- *bond dimension* — identical to five digits across χ ∈ {16, 32, 64};
-- *convergence* — sample 8 was the one apparent outlier (1.86×) and joined the
-  pack at 1.9913 once run 5× longer.
+    R_iTEBD = q/4,   q ≡ |<11|L''|00>|²
 
-Localized to the **denominator**: the R numerator agrees with exact dynamics
-to 4.4% while the purity ratio is 0.531. Exact N=8 purity is 0.926622.
+analytically (user's derivation, 2026-08-04), which also **predicts the factor
+of 2 against the finite-N law R = q/8**. The factor is no longer an anomaly and
+the search for a numerical cause is closed — do not reopen it.
 
-Two candidate explanations have been tried and **both are dead**:
+Measured R(r=100)/q from the cached grids, ten samples each:
 
-1. *"ρ is an equal mixture of two orthogonal states that A = XᵢXⱼ† maps into
-   each other"* — would give purity/2, unchanged numerator, R×2. **Dead:** A
-   contains two X's, so it commutes with P = ΠZ and cannot change charge
-   sector. The cross term Tr[ρ₁Aρ₂†A†] then vanishes and both numerator and
-   purity halve, leaving R *unchanged*.
-2. *"the transfer matrix has two dominant eigenvectors"* — **Dead:** measured
-   densely (not ARPACK, whose random start vector is unreliable for
-   near-degenerate spectra here). The leading eigenvalue is **simple** in
-   every sample tested; nothing sits within 0.1% of it.
+| ε | init | R/q | vs 1/4 | spread |
+|---|------|-----|--------|--------|
+| 0.20 | neel | 0.249635 | −0.146% | 0.12% |
+| 0.20 | zero | 0.24966 | −0.136% | 0.13% |
+| 0.15 | neel | 0.249810 | −0.076% | 0.07% |
+| 0.10 | neel | 0.249907 | −0.037% | 0.03% |
+| 0.05 | neel | 0.249977 | −0.009% | 0.01% |
 
-What the dense spectrum *did* show, for the record: samples 0 and 4 carry a
-cluster of three near-unit eigenvalues (a complex-conjugate pair plus one
-real, 0.4% and 1.8% below η₁ — suggestively the four (q_L, q_R) blocks),
-while sample 6 has a clean gap (η₂ = 0.223) and the *same* factor. The
-symmetry-twisted transfer matrices are the one uniform quantity: |η₁| =
-0.9945–0.9987 under both P·ρ and ρ·P, identical to 10 digits between them, in
-every sample including sample 6.
+The residual is a clean **O(ε²) correction, not an error in the law**: the
+relative deviation divided by ε² is −0.036, −0.034, −0.037, −0.036 — constant
+across a 4× range in ε — so
+
+    R/q = (1/4)(1 − 0.036 ε² + …),   extrapolating to 0.2500015 at ε → 0,
+
+i.e. 1/4 to six parts in a million. That same correction is what biases the
+ε=0.2 reference and produced the +0.11–0.14% "excess" in the ε-sweep table
+above.
+
+**On dimensions.** R is dimensionless and q is a rate, so the exact statement
+is R = q/(4γ) with γ the baseline bond rate, which is 1 in every run here. A
+prediction of the form q/(4ε²) — with ε the L'' operator norm — is excluded by
+the ε sweep *independently of its prefactor*: q ∝ ε² by construction, so
+q/(4ε²) is ε-independent, whereas R varies by the full 16× across the sweep,
+tracking q. (At ε=0.2 it also overshoots by exactly 1/ε² = 25.)
+
+Superseded investigation, kept only so it is not redone: the factor was
+localized to the **denominator** (numerator agrees with exact dynamics to 4.4%,
+purity ratio 0.531, exact N=8 purity 0.926622), and ruled out as measurement
+(tiling + finite routine gives ratio 1.000), bond dimension (identical across
+χ ∈ {16,32,64}), positivity (Trap 3), convergence (sample 8 joined the pack at
+1.9913 once run 5× longer), an equal mixture of two orthogonal states (A has
+two X's, cannot change charge sector, so numerator and purity halve together),
+and transfer-matrix degeneracy (leading eigenvalue is simple in every sample —
+though samples 0 and 4 carry a cluster of three near-unit eigenvalues 0.4% and
+1.8% below η₁, while sample 6 has a clean gap η₂ = 0.223 and the *same*
+factor).
 
 ⚠️ `iMPS.canonicalize()` does **not** truncate by default, so calling it on a
 χ=32 state can regauge it up to bond dimension ~84 (exact, but the transfer
