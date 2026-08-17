@@ -167,16 +167,23 @@ def build_initial_state(name: str, N: int) -> mps_module.MPS:
     return mps_module.MPS.pure_product_state(kets)
 
 
-def build_L2_terms(L_pp: np.ndarray | None) -> list[tuple[np.ndarray, float]]:
+def build_L2_terms(
+    L_pp: np.ndarray | None, baseline: list[np.ndarray] | None = None
+) -> list[tuple[np.ndarray, float]]:
     """Assemble the list of (bond jump operator, rate) terms for the model.
 
     Input: L_pp, the perturbation operator L'' (4x4), or None for the
-        unperturbed baseline.
-    Output: list of (op, rate) pairs: the two baseline jumps plus, if given,
+        unperturbed baseline; baseline, the list of baseline bond jumps to use,
+        defaulting to models.baseline_jump_operators(). A second study
+        (renyi2_drift_annihilation.py) passes the classical biased-hopping /
+        pair-annihilation jumps here; everything downstream -- the correlator,
+        the diagnostics, the cache -- is model-agnostic, so only this one hook
+        is needed.
+    Output: list of (op, rate) pairs: the baseline jumps plus, if given,
         L'', all at rate 1.0.
     """
-    L, L_prime = models.baseline_jump_operators()
-    terms = [(L, 1.0), (L_prime, 1.0)]
+    ops = models.baseline_jump_operators() if baseline is None else list(baseline)
+    terms = [(op, 1.0) for op in ops]
     if L_pp is not None:
         terms.append((L_pp, 1.0))
     return terms
@@ -333,7 +340,7 @@ def job_key(job: dict) -> str:
             f"_N{job['N']}_chi{job['chi_max']}")
 
 
-def run_config() -> dict:
+def run_config(job: dict | None = None) -> dict:
     """The settings that change a run's result but do NOT appear in its cache key.
 
     The key covers (kind, label, init, N, chi_max) only, so lengthening the dt
@@ -342,14 +349,24 @@ def run_config() -> dict:
     shorter run under the same name. run_job compares this against the value
     stored in a cache file and recomputes on a mismatch.
 
+    A job carrying a non-default baseline (job['model'], see build_L2_terms)
+    adds it to the config, so two models can never alias onto one cache entry.
+    The key is added only when present, which is what keeps every entry cached
+    before the second model existed matching as it stands -- adding it
+    unconditionally would invalidate the whole committed cache.
+
+    Input: job, the job dict about to run (or None for the default model).
     Output: dict of the schedule/truncation settings a result depends on.
     """
-    return {
+    config = {
         "dt_schedule": list(DT_SCHEDULE),
         "steps_per_dt": STEPS_PER_DT,
         "recanonicalize_every": RECANON_EVERY,
         "cutoff": CUTOFF,
     }
+    if job is not None and job.get("model") is not None:
+        config["model"] = job["model"]
+    return config
 
 
 # The settings every cache entry written before run_config() existed was
@@ -365,13 +382,14 @@ LEGACY_RUN_CONFIG = {
 }
 
 
-def cache_is_current(out: dict) -> bool:
+def cache_is_current(out: dict, job: dict | None = None) -> bool:
     """Whether a loaded cache entry was produced with the settings in force now.
 
-    Input: out, a dict unpickled from a cache file.
+    Input: out, a dict unpickled from a cache file; job, the job it would be
+        reused for (its model, if any, is part of the comparison).
     Output: True if it may be reused, False if it must be recomputed.
     """
-    return out.get("run_config", LEGACY_RUN_CONFIG) == run_config()
+    return out.get("run_config", LEGACY_RUN_CONFIG) == run_config(job)
 
 
 def run_job(job: dict) -> dict:
@@ -389,7 +407,9 @@ def run_job(job: dict) -> dict:
     re-raises in the parent and would abort every other worker, losing the
     whole sweep because one bond SVD failed to converge.
 
-    Input: job dict with keys 'kind', 'label', 'L_pp', 'N', 'init', 'chi_max'.
+    Input: job dict with keys 'kind', 'label', 'L_pp', 'N', 'init', 'chi_max',
+        and optionally 'baseline' / 'model' to run a model other than the
+        default one (see build_L2_terms and run_config).
     Output: the job dict augmented with 'result' (state-stripped) and
         'seconds', or with 'error' (a traceback string) if the run raised.
     """
@@ -398,7 +418,7 @@ def run_job(job: dict) -> dict:
         try:
             with open(path, "rb") as f:
                 out = pickle.load(f)
-            if cache_is_current(out):
+            if cache_is_current(out, job):
                 out["cached"] = True
                 return out
         except Exception:  # corrupt/partial cache file -- just recompute
@@ -407,10 +427,11 @@ def run_job(job: dict) -> dict:
     t0 = time.perf_counter()
     out = dict(job)
     out["cached"] = False
-    out["run_config"] = run_config()
+    out["run_config"] = run_config(job)
     try:
         res = run_steady_state_correlator(
-            build_L2_terms(job["L_pp"]), job["N"], job["init"], job["chi_max"]
+            build_L2_terms(job["L_pp"], job.get("baseline")),
+            job["N"], job["init"], job["chi_max"],
         )
         out["result"] = _strip_state(res)
     except Exception:

@@ -21,6 +21,15 @@ Baseline jump operators (applied uniformly to every bond):
 both commute with Z (x) Z. A random perturbation L'' is drawn from the
 8-dim parity-commuting space and rescaled to a fixed operator norm epsilon.
 
+A second baseline, `classical_drift_annihilation_jump_operators`, is the
+Lindblad form of a purely classical biased-hopping + pair-annihilation circuit
+(see its docstring). It shares everything the SWSSB study relies on -- strong
+Z_2 parity, the dark vacuum, a bond-local ZZ-commuting form -- so the same
+random L'' ensemble applies unchanged, but it is driven (left-right asymmetric)
+for p != 1/2. Both baselines show SWSSB in the thermodynamic limit; its default
+rates are 16x smaller, which makes it far slower to relax than its cheap-looking
+rates suggest -- see the timescale warning in its docstring before running it.
+
 All operators here are dense 2x2 (single-site) or 4x4 (two-site) physical
 operators in the ordinary computational basis, matching the (operator,
 coefficient) term convention consumed by vectorize / exact / tebd.
@@ -100,6 +109,94 @@ def baseline_jump_operators() -> list[np.ndarray]:
     L = XX @ (I4 - ZaZb)
     L_prime = XX @ (I4 - Za) @ (I4 - Zb)
     return [L, L_prime]
+
+
+def classical_drift_annihilation_jump_operators(
+    p: float, hop_rate: float = 1.0, annihilation_rate: float = 1.0
+) -> list[np.ndarray]:
+    """Return the bond jumps of the biased-hopping / pair-annihilation model.
+
+    Lindblad translation of the classical two-site circuit
+
+        |10> -> p |01> + (1-p) |10>        a lone particle moves right w.p. p
+        |01> -> p |01> + (1-p) |10>        ... and left w.p. 1-p
+        |00> -> |00>                       vacuum is inert
+        |11> -> |00>                       a pair annihilates
+
+    (|1> = particle, left bit = left site). Each classical transition |i> -> |f>
+    becomes its OWN jump operator sqrt(rate) |f><i|, which is the faithful
+    embedding of a classical Markov chain: on diagonal rho the dissipator
+    reproduces the classical master equation exactly (d rho_ff/dt = rate *
+    rho_ii), and off-diagonal elements only dephase. Bundling several
+    transitions into one jump operator instead -- as the earlier SWSSB baseline
+    does with L = XX(1 - ZZ) = 2(|01><10| + |10><01|) -- adds interference terms
+    L rho L^dagger between them that act on coherences, so strictly this family
+    does not contain that model: the two bond generators differ in exactly two
+    entries (the |01><10| <-> |10><01| coherence, magnitude 4).
+
+    That distinction is real but, for everything this study measures, empty.
+    An earlier version of this docstring drew the opposite conclusion --
+    "that model is NOT the p = 1/2 member" -- and it was used to argue the two
+    models were incomparable. Measured since: at p = 1/2, hop_rate = 8,
+    annihilation_rate = 16 the sector steady states differ by ~1e-6 in norm and
+    R by 1e-6 relative, sample by sample. Treat them as the same model unless
+    you are specifically probing coherences.
+
+        L_R = sqrt(hop_rate * p)       |01><10|     hop right
+        L_L = sqrt(hop_rate * (1-p))   |10><01|     hop left
+        L_A = sqrt(annihilation_rate)  |00><11|     pair annihilation
+
+    All three connect basis states of equal Z (x) Z parity (|01>, |10> both odd;
+    |00>, |11> both even), so all three lie in the 8-dim commutant of Z (x) Z
+    and the chain keeps the strong Z_2 symmetry P = Z_1...Z_N -- particle number
+    parity, conserved because annihilation removes particles two at a time. The
+    vacuum |0...0> is a dark state of all three, exactly as for the earlier
+    baseline, so the 'zero' start again begins at R = 0.
+
+    For p > 1/2 charge drifts right; p = 1/2 is the unbiased limit and p = 1 is
+    totally asymmetric.
+
+    Relaxation time (this is load-bearing -- read before choosing a schedule)
+    ------------------------------------------------------------------------
+    The default rates here are 1, against 4-16 for baseline_jump_operators(),
+    so a given dt schedule buys ~16x LESS relaxation with this model than with
+    that one. The slow mode is the pair creation |00> -> |11> supplied by L'',
+    at rate q = |<11|L''|00>|^2, and the steady state needs
+
+        t ~ 12 / q          (measured: converged by ~3.4/q, 12/q for margin)
+
+    which at epsilon = 0.2 is 540-6800 time units across the standard ten-sample
+    ensemble. The study-wide finite schedule is 55.5 units. Running this model
+    on it produced a clean, constant-ratio exponential profile that was entirely
+    a partially-relaxed transient, and a published "no SWSSB in this model"
+    conclusion that had to be retracted (CLAUDE.md, Trap 5). The infinite-system
+    steady state is in fact long-range ordered, R = 4q/annihilation_rate.
+
+    Note that no local diagnostic catches this: two initial states agree with
+    each other to 0.1% while both sit 19x below the true value, because both
+    co-drift along the same slow manifold. Size the schedule from q up front.
+
+    Input:
+        p: probability that a lone particle on the bond ends up on the right.
+        hop_rate: overall rate scale of the two hopping channels.
+        annihilation_rate: rate of |11> -> |00>.
+    Output: list [L_R, L_L, L_A], each a (4, 4) complex ndarray.
+    """
+    if not 0.0 <= p <= 1.0:
+        raise ValueError(f"p must be a probability, got {p}")
+
+    def transition(final: int, initial: int, rate: float) -> np.ndarray:
+        """sqrt(rate) |final><initial| on the two-site computational basis."""
+        M = np.zeros((4, 4), dtype=complex)
+        M[final, initial] = np.sqrt(rate)
+        return M
+
+    # Basis index = 2 * (left bit) + (right bit): 0=|00>, 1=|01>, 2=|10>, 3=|11>.
+    return [
+        transition(0b01, 0b10, hop_rate * p),
+        transition(0b10, 0b01, hop_rate * (1.0 - p)),
+        transition(0b00, 0b11, annihilation_rate),
+    ]
 
 
 def project_to_zz_commutant(M: np.ndarray) -> np.ndarray:

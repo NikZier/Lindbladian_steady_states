@@ -43,7 +43,12 @@ same R from either, so where they agree the value is converged from two
 directions, and where they split the pair brackets the truth. Both are now run
 on the full grid — see below.
 
-## ⚠️ Three traps, and each has inverted a conclusion here
+## ⚠️ The traps, and each has inverted a conclusion here
+
+Traps 1–3 are general; 4 and 5 were found in the second model's section below
+and are documented there. **Trap 5 is the one that has cost the most** — it
+invalidated an entire published-in-this-file conclusion — so read it even if you
+are only working on the first model.
 
 ### Trap 1: χ-limited vs cutoff-limited
 
@@ -89,6 +94,14 @@ tell them apart, re-run one case at half the final dt: the floor drops 4×, a
 genuinely unrelaxed residual barely moves. Below ~1e-7 the number is arithmetic
 noise (r is a square root of a near-total cancellation between terms of order
 ‖ℒ‖²).
+
+⚠️ **And read the residual against the gap of the mode still moving, not only
+against the dt² floor.** r ≈ gap × δ, so a slow mode makes a tiny residual
+compatible with a state far from the fixed point: in the second model, sample 8
+at N=20 sat at r = 5.1e-5 with dt² = 2.5e-5 — apparently on the floor — while
+its slow mode had rate q = 1.8e-3, putting it a few percent away in norm and
+**19× off in R**. Dividing r by the gap is one line and it is the difference
+between the two readings.
 
 **Cached runs from before this existed have `residual = None`, and re-running
 will not fill it in** — the diagnostic changes neither the cache key nor
@@ -296,7 +309,336 @@ The `zero`-vs-`neel` differences seen at χ=32 (up to 16% at N=20) are
 **numerical** — exactly 0.0% at N=4 where truncation is exact, growing in
 lockstep with the discarded weight.
 
-## The infinite system (iTEBD)
+## Second model: the driven classical circuit (2026-08-11, retracted 08-13)
+
+`experiments/renyi2_drift_annihilation.py`, `models.classical_drift_annihilation_
+jump_operators`. A purely classical two-site circuit — biased hopping plus pair
+annihilation — in Lindblad form, one jump operator per classical transition:
+
+    L_R = sqrt(p) |01><10|    L_L = sqrt(1-p) |10><01|    L_A = |00><11|
+
+at p = 0.8, rates 1, same ε = 0.2 and the **same ten L'' seeds** as above, so
+sample-by-sample comparison is model-vs-model rather than draw-vs-draw.
+
+**The first model IS this one at p = 1/2, hop_rate = 8, annihilation_rate = 16**
+— for every purpose this study measures. The two Lindbladians are genuinely
+different: L = XX(1−ZZ) = 2(|01><10| + |10><01|) is *one* jump operator, so
+L ρ L† carries interference terms the two-separate-operator embedding replaces
+with dephasing, and the bond generators differ in exactly two entries (the
+|01><10| ↔ |10><01| coherence, magnitude 4). But the effect on the sector
+steady state is ~1e-6 in norm and on R is **1e-6 relative, sample by sample**.
+Do not treat the models as incomparable on that basis — an earlier note here
+did, and it was wrong.
+
+Shared, and what makes the comparison legitimate: strong Z₂ parity (particle
+number mod 2, since annihilation removes pairs), the dark vacuum |0…0>, the
+bond-local ZZ-commuting form, hence the same random-L'' ensemble.
+
+### ⚠️ RETRACTED 2026-08-13: "R decays exponentially, no SWSSB here"
+
+**This model has SWSSB.** The finite-N grid below measures a transient, not a
+steady state. The infinite-system run (`imps_drift_eps_grids.py`, next section)
+gives R flat to r = 100 for **all 10 samples at all four ε ∈ {0.2, 0.15, 0.1,
+0.05}** — 40 of 40 runs, R(100)/R(1) ∈ [0.9999, 1.033].
+
+What was wrong: **evolved time**. The finite schedule is
+300 × (0.1+0.05+0.02+0.01+0.005) = **55.5 time units**, and this model needs
+~12/q ≈ 540–6800 units at ε=0.2. The first model tolerated the same schedule
+because its baseline rates are 4–16 rather than 1, buying ~16× more relaxation
+per unit time — the rate mismatch noted above for ε has the same consequence
+for the *schedule*, and that consequence was missed.
+
+The retracted claim, kept so it is not re-derived: the N=20 profile falls with
+step ratio 0.822, 0.806, 0.799, 0.794, 0.790, 0.788, 0.786, 0.785, 0.787,
+0.794, 0.835 across sep 1→12 — constant over twelve sites and a decade in R,
+R² = 0.985–0.9996 for exponential fits at N=16 and N=20, giving ξ = 4.11…7.38
+with corr(log q, log ξ) = +0.887. **All of it is a partially-relaxed state.** A
+clean constant step ratio over a decade is not evidence of a steady-state
+exponential; a relaxation front crossing the chain produces one too.
+
+The one diagnostic that pointed at it was ignored: ξ correlated with q, and q
+is the *relaxation rate*. That is the signature of a time-dependent profile,
+not of a length scale.
+
+Two numbers show the size of the error. Infinite-vs-finite at ε=0.2, per
+sample, ordered by q:
+
+    s          q  R_inf (flat)  R_fin (N=20)  inf/fin
+    8  1.774e-03    7.0381e-03    3.6978e-04    19.0x
+    7  3.988e-03    1.6031e-02    8.6075e-04    18.6x
+    4  5.222e-03    2.0550e-02    1.2087e-03    17.0x
+    0  5.680e-03    2.1997e-02    1.3366e-03    16.5x
+    2  5.619e-03    2.2015e-02    1.4685e-03    15.0x
+    3  7.923e-03    3.0615e-02    2.1536e-03    14.2x
+    1  1.039e-02    4.0665e-02    3.1570e-03    12.9x
+    9  1.393e-02    5.4316e-02    5.0793e-03    10.7x
+    5  1.422e-02    5.4685e-02    5.3329e-03    10.3x
+    6  2.214e-02    8.4266e-02    1.3604e-02     6.2x
+
+**The discrepancy is monotone in q**, i.e. in 1/τ. A finite-size effect would
+not order itself by the pair-creation rate; under-relaxation must.
+
+And the apparent ξ was never a decay length of R. The converged profile is
+R(r) = R_∞ + A e^{−r/ξ_tm} with ξ_tm *small*: sample 9 at ε=0.2 has ξ_tm = 1.34
+and rises 0.053909 → 0.054310 over r = 1…10, then sits flat to r = 100. The
+transfer matrix's ξ is the **approach length to the plateau**, not a decay of
+it — so a finite ξ from `iobservables.correlation_length` is fully compatible
+with long-range order, and reading it as a decay length inverts the physics.
+
+### The R = q/8 law generalizes — it is R = 2q/γ_A
+
+⚠️ Corrects an earlier claim here that "there is no such law". There is; the
+evidence against it (4.3% sample scatter at N=4) was an O(ε²) correction, not a
+breakdown. At ε = 0.01 the scatter is **0.008%**, and 0.008% × (0.2/0.01)² =
+3.2% ≈ the 4.3% seen at ε = 0.2. R ∝ q holds essentially exactly; ε = 0.2 is
+simply a *relatively* stronger perturbation here (baseline rates ~1, against
+4–16 in the first model).
+
+Measured on the exact N=4 sector state, F ≡ R·γ_A/q as ε → 0, at p = 1/2:
+
+    hop   ann   hop/ann    eps=0.2    eps=0.05    eps=0.01
+    1     1       1.000    2.010014   2.000846    2.000034
+    8    16       0.500    2.000926   2.000059    2.000002
+    1    16       0.062    2.002542   2.000160    2.000006
+    16    1      16.000    2.012297   2.000840    2.000034
+
+    R = 2q/γ_A   exactly at p = 1/2, γ_A the PAIR-ANNIHILATION rate,
+                 independent of the hop rate over a 256x range in hop/γ_A.
+
+So **the first model's 1/8 is 2/16 — a statement about its annihilation rate
+alone.** The hopping rate, hence the diffusion constant, drops out entirely.
+The first model reproduces F = 2.000002 at ε = 0.01 directly, which also
+validates `sector_steady_state` against the analytic result.
+
+The bias breaks both properties: F is no longer 2, and it acquires a hop-rate
+dependence (a bias velocity gives a second dimensionless ratio v/γ_A).
+
+    p         0.50     0.60     0.70     0.80     0.90     1.00
+    F (1,1)   2.0000   2.3226   2.4385   2.3415   2.0889   1.7501
+    F (8,16)  2.0000   2.2995   2.4757   2.5070   2.4108   2.2222
+
+R/q at p=0.8, rates 1 is 2.3615 against the first model's 0.12515 — 18.9×,
+which decomposes as 16.2× rate normalization and 1.17× bias, nothing anomalous.
+
+⚠️ The R/q fall with N below is **relaxation, not a finite ξ** (see the
+retraction above). Reproduced only so the numbers are not re-measured and
+re-misread:
+
+    N          4       8      12      16      20
+    mean R/q   2.361   0.839   0.513   0.387   0.308
+    spread     4.3%   29%     59%     93%    132%
+
+Both the fall and the growing spread are the fixed 55.5-unit schedule buying
+less and less relaxation as N grows, with the per-sample rate q setting how
+much each one loses. N=4 is the only row that means anything, because it is the
+only one that relaxes inside the schedule.
+
+### The infinite system settles it: R = 4q/γ_A (2026-08-13)
+
+`experiments/imps_drift_eps_grids.py`, χ=128, p=0.8, |0…0⟩, 10 samples ×
+ε ∈ {0.20, 0.15, 0.10, 0.05}, 46 jobs / 576 240 time units / ~3.9 h on 12
+workers. **R is flat in separation at every ε** — this is the SWSSB
+long-range-order signature with no finite-size caveat:
+
+    ε      n    R(100)/R(1) range     peak bond
+    0.20   10   0.99954 – 1.00754     29–50 / 128
+    0.15   10   0.99998 – 1.00394     27–40 / 128
+    0.10   10   1.00003 – 1.01723     19–37 / 128
+    0.05   10   0.99989 – 1.03316     10–25 / 128
+
+Truncation never binds (worst case bond 50 of 128), so unlike the finite grid
+this is not a lower bound.
+
+**The amplitude law, restricting to runs with |drift| < 1%:**
+
+    ε      n    mean R/q    spread
+    0.20   10   3.887955    1.48%
+    0.15   10   3.937483    0.84%
+    0.10    8   3.973188    0.42%
+    0.05    7   3.994284    0.10%
+
+    fit  R/q = 4.0014 (1 − 0.709 ε²)     ε→0 intercept 4.0014, i.e. 4 to 0.04%
+
+    R_iTEBD = 4q/γ_A
+
+which **reproduces the first model's R = q/4 exactly** (γ_A = 16 there:
+4/16 = 1/4), so the two models share one infinite-system law as well as one
+finite-N law. The O(ε²) coefficient is −0.709 against the first model's −0.036,
+a ratio of 19.7 ≈ the 16× rate normalization — the same correction measured in a
+model whose baseline rates are 16× smaller.
+
+Note this makes the infinite law 4q/γ_A against the finite N=4 exact
+F = 2.3415 at p = 0.8. At p = 1/2 the finite law is 2q/γ_A and the ratio is
+exactly 2, matching the first model's q/8 → q/4. At p = 0.8 it is 1.71, so
+**the factor of 2 is a p = 1/2 statement**; do not assume it away from there.
+
+**Convergence, four independent ways** (this is the claim that overturns a
+documented conclusion, so it is not resting on one test):
+
+- **Two starts, opposite directions.** |neel⟩ vs |0…0⟩ at ε=0.2 on samples
+  8 / 3 / 6 agree to **0.00–0.11%** at r = 1, 20 and 100 — including sample 8,
+  the slowest relaxer and the sample the retracted conclusion rested on.
+- **3×-length control.** Sample 4 at 8820 units reproduces its 2940-unit value
+  to **six digits** (−0.00% at r = 1, 20, 100), so TARGET_GAP_TIMES = 12 is
+  enough and every factor-1 job in the grid is sound.
+- **L''=0 from |0…0⟩ returns R = 0.000e+00 at bond 1** — the exact dark vacuum.
+  All 40 production runs start from |0…0⟩, so that is their floor.
+- Peak bond dimension 10–50 against a cap of 128.
+
+⚠️ **The L''=0 |neel⟩ control does NOT converge** (R = 2.9e-4 … 5.1e-4,
+comparable to the grid's smallest signal 4.4e-4) and this is expected, not a
+pipeline fault: at L''=0 the model is diffusion-limited pair annihilation,
+which is *critical*, so no fixed schedule relaxes it from a non-dark state.
+A |neel⟩-started run therefore has no usable control floor here — a second
+reason the grid runs from |0…0⟩.
+
+**Cost note, opposite to intuition.** |0…0⟩ is 116× cheaper than |neel⟩ at
+ε=0.05 (bond 20 and 34 ms per time unit, against bond 128 — capped — and
+3623 ms), because the vacuum is dark so the state never leaves its
+low-entanglement neighbourhood. The |neel⟩ transient at small ε is also violent
+enough to drive R *negative* (truncation destroying positivity). Per-ε cost is
+then roughly flat: 16× more time units at ε=0.05 against ~17× cheaper steps.
+
+Schedules are sized **per sample** as 12/q rounded up to whole 2940-unit copies,
+not uniformly per ε: q spans 12.5× across the ensemble, so a uniform schedule
+over-runs sample 6 tenfold while leaving sample 8 unrelaxed. Since q ∝ ε² this
+reproduces the 1/ε² scaling automatically rather than hard-coding it.
+
+### Quality of this grid — it is *worse* than the first model's, not better
+
+⚠️ This section previously read "better than the first model's, on every axis".
+Every item below is still measured correctly; the *inference* from them was
+wrong, and it is instructive exactly because each one looks like a convergence
+test and none of them is one.
+
+- **N=4 is exact and matches**: `sector_steady_state` solves the (+,+) block
+  null space densely (`exact.steady_state` refuses — the strong symmetry makes
+  the global zero eigenvalue degenerate). TEBD agrees to **0.0002%** worst case,
+  and the L''=0 steady state comes back as the pure dark vacuum (purity
+  1.000000, R = −3e−16). **But N=4 relaxes inside 55.5 units and N=20 does
+  not**, so agreement at N=4 licenses the *pipeline*, never the schedule at
+  larger N. This is Trap 2's structure exactly: relaxation time grows with N.
+- **The zero-vs-neel spread (≤0.08% to N=16, ≤0.68% at N=20) is not evidence
+  of relaxation** — see Trap 5. Both starts equilibrate locally within a few
+  time units and then crawl along the *same* slow manifold at rate ~q, agreeing
+  with each other the whole way while both sit ~14× below the fixed point.
+- **The residual does not rescue it either.** Sample 8's 5.1e-5 at N=20 was
+  read as "≈ the dt² = 2.5e-5 Trotter floor". But the slow mode has rate
+  q = 1.8e-3, so r ≈ q·δ puts the state a few percent from the fixed point in
+  norm — and R, being quadratic in ρ, is off by 19×. **Never read a residual as
+  a floor without dividing by the gap of the mode that is still moving.**
+- **Control floor is 7.09e-10**, ~5600× below the first model's 4e-06. Real,
+  and irrelevant to the failure: a floor bounds the *smallest believable
+  signal*, not the distance to the steady state.
+- **Truncation is the binding constraint instead**, and much harder than
+  before: N=20 needs χ > 128 for 9 of 10 samples (the first model settled at
+  45–72). Cost ~101 min per N=20 run because the bond sits at the cap
+  throughout. Peak bond dimension is **not** a function of q — sample 6 has the
+  largest q and sits at 85 while mid-q samples 1 and 5 cap out — so it tracks
+  the *direction* of L'' in the commutant, and which samples are usable cannot
+  be predicted.
+
+χ sweep, sample 8, N=20: 3.004e-4 (χ=32, capped), 3.294e-4 (χ=64, capped),
+3.698e-4 (χ=128, **bond 64, cutoff-limited**). Only the last is a real point;
+truncation suppresses R by 19% at χ=32, i.e. in the decay-fabricating direction.
+
+### Trap 4: don't fit R(N) when you can read R(i,r)
+
+⚠️ Both items below stand as stated, but note the larger lesson they hide:
+reading the profile instead of fitting R(N) was the right *move* and still gave
+the wrong *answer*, because both were measured on an unrelaxed state. A better
+diagnostic applied to a state that has not converged is still wrong. Preferring
+the profile does not substitute for asking whether the run finished.
+
+Two things went wrong before the profiles were looked at, both worth avoiding:
+
+- **The boundary upturn inverts a ξ fit.** R rises over the last ~2 sites of an
+  open chain (sample 8, N=20: 2.45e-4, 2.60e-4, 5.27e-4 at sep 12,13,14).
+  Fitting the "outer half" of the profile — the natural choice — lands squarely
+  on it and returns ξ = ∞ or nonsense (910, 13862). Drop the last two sites.
+- **AICc silently refuses a 3-parameter fit on 4 points.** The plateau model
+  R_∞ + A e^{−N/2ξ} has k=3, and the correction term needs n > k+1, so at four
+  surviving sizes it returns ∞ and the plateau loses *by construction*, not on
+  evidence. `drift_annihilation_scaling.py` reports "power_law 7 / exponential
+  3" and that verdict is worthless for the nine samples with four points.
+  The profile needs no model selection at all — prefer it.
+
+### ⚠️ Trap 5: two initial states agreeing is not evidence of relaxation
+
+**The single most expensive mistake in this project.** The zero/neel test is
+used everywhere here as *the* two-sided convergence bracket, on the argument
+that one start approaches from above and the other from below, so agreement
+pins the answer between them. That argument has a hole, and this model fell
+straight through it.
+
+The two starts differ only in their *local* configuration. The fast rates (~1
+here, 4–16 in the first model) equilibrate that within a few time units. After
+that both states sit on the same slow manifold — the one direction whose decay
+rate is the small pair-creation rate q — and they crawl along it **together**,
+in the same direction, at the same speed. They agree with each other at every
+moment while both are far from the fixed point.
+
+Measured: at N=20 the two starts agree to **0.13%** (sample 8) and ≤0.68%
+(worst in the ensemble), and both are **19× below** the true value.
+
+    what "agreement" requires   what it actually got
+    ------------------------------------------------------------------------
+    approach from opposite      both descend onto one slow manifold, then
+    sides of the answer         co-drift along it in the same direction
+
+So the test is only a bracket once *both* trajectories have flattened. Read
+`stage_correlators` / the trajectory shape first; if both are still moving
+monotonically, their agreement means they are correlated, not converged. What
+would have caught it: any absolute reference (the infinite-system value, an
+exact sector solve at a size that does relax, or 12/q as a required schedule
+length computed *before* the run rather than a spread checked after it).
+
+Corollary for the first model's section above: "steady-state uniqueness holds
+where the runs are converged, 0.00% at N=4 and 8, 0.21% at N=12" is evidence of
+uniqueness *given* convergence, and evidence of nothing at all without it.
+
+### What is open now
+
+**The p-sweep is dead as posed, and so is the question it was going to answer.**
+It was the highest-value follow-up only while ξ was believed finite at p = 0.8
+and infinite at p = 1/2, so that some p_c had to separate them. There is no such
+boundary to find: the order is present at p = 0.8, and the bias destroys
+nothing. Do not run it to locate p_c. A p-sweep is still mildly interesting for
+the *amplitude* — whether R = 4q/γ_A picks up a bias-dependent prefactor in the
+thermodynamic limit as F does at finite N (the F table above: 2.0 → 2.34 →
+1.75 across p) — but that is a quantitative curiosity, not an open phase
+question.
+
+⚠️ Do not compare a p-sweep at fixed ε against the p = 0.8 grid without
+renormalizing: the *relative* perturbation strength depends on the baseline
+rates, which is what inflated the N=4 sample scatter from 0.78% to 4.3% here.
+
+**The genuinely open item: the finite grid is now known-wrong and unfixed.**
+Every N ≥ 8 number in `renyi2_drift_annihilation.pkl` measures a transient. It
+should be re-run at a 12/q-sized schedule (~50–120× the current 55.5 units) and
+the finite values should then rise toward 4q/γ_A. That is expensive at N=20,
+where truncation binds independently (χ > 128 for 9 of 10 samples), so the
+tractable version is N ≤ 12 with the long schedule — enough to confirm the
+finite numbers move in the predicted direction, without fighting truncation at
+the same time. Until that is done, **quote the infinite-system grid, not the
+finite one, for this model.**
+
+**Then check the first model's finite grid for the same disease.** Its rates are
+16× larger, so 55.5 units buys ~16× more relaxation and its N ≤ 16 plateau at
+R = q/8 is probably genuine — its N=4-exact anchor and its two-sided agreement
+would both be consistent either way, which is precisely the trap. The cheap
+discriminator: it already reports the *right* answer (R/q = 0.1256 vs the
+analytic 1/8), which an unrelaxed grid would not. Worth one long-schedule run at
+N=12 to confirm rather than assume.
+
+## The infinite system (iTEBD) — FIRST model
+
+⚠️ Everything in this section is the **first** model (`baseline_jump_operators`,
+L = XX(1−ZZ)). The second model's infinite-system run lives in its own section
+above ("The infinite system settles it: R = 4q/γ_A"). Keeping this straight is
+not pedantry: reading this section's flat R against the second model's finite-N
+decay, as if the two were the same Lindbladian, is what delayed the retraction
+above by two days.
 
 `experiments/imps_eps_init_grids.py`, χ=128, |neel⟩ unless stated. Bond
 dimension never binds: it peaks at 29 at ε=0.2 and falls to **7–12 at
@@ -440,6 +782,20 @@ operator becomes 7056×7056). Pass `chi_max` if size matters.
       renyi2_swssb_chi128.py     **the headline run** — 10 samples × 5 sizes ×
                                  both initial states at χ=128
       renyi2_swssb_profiles.py   re-plots from the pickles, runs no TEBD
+      renyi2_drift_annihilation.py  **the second model** — driven classical
+                                 circuit, 10 samples x 5 sizes x both starts at
+                                 chi=128, plus L''=0 controls, a chi sweep and
+                                 an exact (+,+)-sector reference at N=4
+      drift_annihilation_scaling.py  R(N) decay-shape fits for the above. Read
+                                 its AICc caveat (Trap 4) before quoting it;
+                                 the profile is the better diagnostic
+      imps_drift_eps_grids.py    **the second model in the thermodynamic
+                                 limit** — p=0.8, ε ∈ {0.2,0.15,0.1,0.05},
+                                 10 samples from |0…0⟩, plus |neel⟩ cross-checks
+                                 at ε=0.2, L''=0 controls and a 3×-length
+                                 control. Schedules are sized per sample as
+                                 12/q, not uniformly per ε. This is the run
+                                 that retracted "no SWSSB in the second model"
       imps_eps_init_grids.py     **the infinite-system study** — the ε sweep
                                  {0.2, 0.15, 0.1, 0.05}, both initial states,
                                  and the long-schedule convergence controls.
@@ -457,7 +813,11 @@ dims). Infinite: `imps_finite_vs_infinite.png` (finite N vs the thermodynamic
 limit, infinite point on its own broken axis), `imps_correlator_vs_epsilon.png`
 (R vs ε with a FREE-exponent power-law fit — p = 1.99909 ± 0.00077),
 `imps_trajectories_all.png` (every sample × every ε, raw), and
-`imps_positivity_hermiticity.png`.
+`imps_positivity_hermiticity.png`. Second model, infinite:
+`imps_drift_flatness.png` (R(r)/R(1) per sample, one panel per ε — the flat
+lines are the retraction), `imps_drift_R_vs_epsilon.png` (R vs q, and R/q vs ε),
+`imps_drift_finite_vs_infinite.png` (the finite grid's decay against the
+thermodynamic limit, same sample, same ε).
 
 **Deleted 07-31, do not resurrect from old pickles.** Everything produced by
 the pre-fix iTEBD — before the correlator Λ-weighting and canonicalize gauge
@@ -474,8 +834,9 @@ separately-computed |zero⟩ runs to five digits.
 
 ## Running things
 
-    uv run pytest                                     # 59 tests, ~2 s
+    uv run pytest                                     # 133 tests, ~5 s
     uv run python experiments/renyi2_swssb_chi128.py  # ~2.7 h per initial state
+    uv run python experiments/imps_drift_eps_grids.py  # ~3.9 h, 46 jobs
 
 Experiments parallelise across `N_WORKERS` processes. **Every completed run is
 pickled into `experiments/results/_cache/`** keyed by `kind_label_init_N_chi`,
