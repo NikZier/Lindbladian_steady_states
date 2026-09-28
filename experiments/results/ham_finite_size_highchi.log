@@ -1,0 +1,61 @@
+
+40 N=12 chi=256 jobs on 12 workers, chi=128.
+
+     grid eps=0.20   s4 N= 12 chi=256  R=  4.4820e-05  bond= 60   drift=  0.34%  [168.5min, elapsed 168.5min]
+     grid eps=0.15   s1 N= 12 chi=256  R=  9.4560e-05  bond= 64   drift=  0.33%  [169.1min, elapsed 169.1min]
+     grid eps=0.20   s5 N= 12 chi=256  R=  6.8950e-05  bond= 64   drift=  0.34%  [169.4min, elapsed 169.4min]
+     grid eps=0.20   s3 N= 12 chi=256  R=  2.1920e-04  bond= 71   drift=  0.17%  [170.9min, elapsed 170.9min]
+     grid eps=0.20   s1 N= 12 chi=256  R=  1.6826e-04  bond= 70   drift=  0.39%  [171.5min, elapsed 171.5min]
+     grid eps=0.20   s2 N= 12 chi=256  R=  2.0558e-04  bond= 73   drift=  0.37%  [172.6min, elapsed 172.6min]
+     grid eps=0.15   s0 N= 12 chi=256  R=  3.4431e-04  bond= 78   drift=  0.27%  [172.8min, elapsed 172.8min]
+     grid eps=0.20   s6 N= 12 chi=256  R=  3.2682e-04  bond= 79   drift=  0.40%  [173.8min, elapsed 173.8min]
+     grid eps=0.20   s8 N= 12 chi=256  R=  3.8099e-04  bond= 81   drift=  0.33%  [174.4min, elapsed 174.4min]
+     grid eps=0.20   s7 N= 12 chi=256  R=  5.4485e-04  bond= 86   drift=  0.35%  [174.6min, elapsed 174.6min]
+     grid eps=0.20   s0 N= 12 chi=256  R=  6.1325e-04  bond= 90   drift=  0.45%  [174.9min, elapsed 174.9min]
+     grid eps=0.20   s9 N= 12 chi=256  R=  5.9959e-04  bond= 93   drift=  0.50%  [175.3min, elapsed 175.3min]
+     grid eps=0.15   s4 N= 12 chi=256  R=  2.5300e-05  bond= 51   drift=  0.32%  [164.6min, elapsed 334.0min]
+     grid eps=0.15   s2 N= 12 chi=256  R=  1.1577e-04  bond= 67   drift=  0.40%  [167.1min, elapsed 335.6min]
+     grid eps=0.15   s3 N= 12 chi=256  R=  1.2235e-04  bond= 64   drift=  0.21%  [167.1min, elapsed 336.2min]
+     grid eps=0.15   s5 N= 12 chi=256  R=  3.8993e-05  bond= 54   drift=  0.08%  [165.4min, elapsed 336.3min]
+     grid eps=0.10   s1 N= 12 chi=256  R=  4.1783e-05  bond= 55   drift=  0.07%  [163.9min, elapsed 338.5min]
+     grid eps=0.15   s6 N= 12 chi=256  R=  1.8363e-04  bond= 72   drift=  0.33%  [168.2min, elapsed 339.7min]
+     grid eps=0.10   s3 N= 12 chi=256  R=  5.4746e-05  bond= 59   drift=  0.18%  [164.4min, elapsed 339.7min]
+     grid eps=0.10   s2 N= 12 chi=256  R=  5.1266e-05  bond= 61   drift=  0.21%  [165.6min, elapsed 340.5min]
+     grid eps=0.15   s8 N= 12 chi=256  R=  2.1396e-04  bond= 69   drift=  0.21%  [168.9min, elapsed 341.6min]
+     grid eps=0.10   s0 N= 12 chi=256  R=  1.5315e-04  bond= 67   drift=  0.33%  [167.4min, elapsed 341.8min]
+     grid eps=0.15   s7 N= 12 chi=256  R=  3.0679e-04  bond= 76   drift=  0.24%  [169.2min, elapsed 341.8min]
+     grid eps=0.15   s9 N= 12 chi=256  R=  3.3775e-04  bond= 81   drift=  0.37%  [170.2min, elapsed 344.1min]
+     grid eps=0.10   s4 N= 12 chi=256  R=  1.1251e-05  bond= 52   drift=  0.36%  [159.0min, elapsed 493.0min]
+     grid eps=0.10   s5 N= 12 chi=256  R=  1.7521e-05  bond= 48   drift=  0.34%  [160.1min, elapsed 495.7min]
+     grid eps=0.05   s4 N= 12 chi=256  R=  2.9529e-06  bond= 51   drift=  2.67%  [156.5min, elapsed 498.3min]
+     grid eps=0.05   s1 N= 12 chi=256  R=  1.0513e-05  bond= 48   drift=  0.13%  [158.6min, elapsed 499.2min]
+     grid eps=0.10   s6 N= 12 chi=256  R=  8.1185e-05  bond= 62   drift=  0.02%  [163.8min, elapsed 499.9min]
+     grid eps=0.05   s2 N= 12 chi=256  R=  1.2542e-05  bond= 50   drift=  1.69%  [158.5min, elapsed 500.2min]
+     grid eps=0.10   s7 N= 12 chi=256  R=  1.3634e-04  bond= 65   drift=  0.22%  [164.2min, elapsed 500.5min]
+     grid eps=0.05   s3 N= 12 chi=256  R=  1.3759e-05  bond= 51   drift=  0.02%  [158.8min, elapsed 500.6min]
+     grid eps=0.05   s0 N= 12 chi=256  R=  3.7937e-05  bond= 55   drift=  0.30%  [160.9min, elapsed 500.6min]
+     grid eps=0.05   s5 N= 12 chi=256  R=  4.5199e-06  bond= 51   drift=  1.26%  [157.1min, elapsed 501.2min]
+     grid eps=0.10   s8 N= 12 chi=256  R=  9.4275e-05  bond= 64   drift=  0.24%  [163.0min, elapsed 501.6min]
+     grid eps=0.10   s9 N= 12 chi=256  R=  1.4994e-04  bond= 71   drift=  0.46%  [164.4min, elapsed 504.1min]
+     grid eps=0.05   s6 N= 12 chi=256  R=  2.0276e-05  bond= 47   drift=  0.33%  [128.7min, elapsed 621.7min]
+     grid eps=0.05   s7 N= 12 chi=256  R=  3.3776e-05  bond= 54   drift=  0.35%  [128.7min, elapsed 624.4min]
+     grid eps=0.05   s8 N= 12 chi=256  R=  2.3553e-05  bond= 50   drift=  0.36%  [127.9min, elapsed 626.2min]
+     grid eps=0.05   s9 N= 12 chi=256  R=  3.7079e-05  bond= 54   drift=  0.29%  [128.0min, elapsed 627.2min]
+
+40/40 succeeded in 627.2 min.
+
+============================================================================================
+HIGH-CHI ROW: N=12 at chi=256
+============================================================================================
+   eps   mean R/|c|^2    spread  max drift  max bond  at cap
+  0.20       0.021113    1.47%     0.50%        93    0/10
+  0.15       0.021112    1.49%     0.40%        81    0/10
+  0.10       0.021100    1.36%     0.46%        71    0/10
+  0.05       0.021187    6.66%     2.67%        55    0/10
+
+  pooled over all epsilon: 0.021128 +/- 0.000232   (spread 6.68%)
+  chi=128 gave 0.022868 with a 38% spread -- see the docstring.
+  exact N=4: 0.023091
+  exact N=6: 0.021588
+
+Saved -> C:\Users\Niklas\Documents\Lindbladia_steady_states\Lindbladian_steady_states\experiments\results\ham_finite_size_highchi.pkl

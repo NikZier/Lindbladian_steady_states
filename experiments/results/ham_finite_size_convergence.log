@@ -1,0 +1,35 @@
+
+6 convergence jobs on 6 workers, chi=128.
+
+     conv eps=0.05   s6 N= 12 chi=128  R=  2.9558e-05  bond= 47   drift= 27.15%  [29.1min, elapsed 29.1min]
+     conv eps=0.20   s9 N= 12 chi=128  R=  6.0762e-04  bond=128*  drift=  1.83%  [29.8min, elapsed 29.8min]
+     conv eps=0.05   s6 N= 12 chi=192  R=  2.1134e-05  bond= 55   drift=  2.06%  [71.4min, elapsed 71.4min]
+     conv eps=0.20   s9 N= 12 chi=192  R=  6.0090e-04  bond=112   drift=  0.35%  [73.4min, elapsed 73.4min]
+     conv eps=0.05   s6 N= 12 chi=256  R=  2.0276e-05  bond= 47   drift=  0.33%  [132.0min, elapsed 132.0min]
+     conv eps=0.20   s9 N= 12 chi=256  R=  5.9959e-04  bond= 93   drift=  0.50%  [137.4min, elapsed 137.5min]
+
+6/6 succeeded in 137.5 min.
+
+============================================================================================
+CHI CONVERGENCE at N=12
+============================================================================================
+
+  probe: epsilon=0.05, sample6
+    chi             R    R/|c|^2   vs prev   bond    cap    drift   discarded stages (R/|c|^2)
+    128   2.95584e-05   0.030653        --     47  False  27.15%    5.65e-05   0.0217 0.0223 0.0307
+    192   2.11342e-05   0.021917   28.50%     55  False   2.06%    5.63e-05   0.0225 0.0224 0.0219
+    256   2.02756e-05   0.021027    4.06%     47  False   0.33%    2.93e-05   0.0208 0.0210 0.0210
+
+  probe: epsilon=0.20, sample9
+    chi             R    R/|c|^2   vs prev   bond    cap    drift   discarded stages (R/|c|^2)
+    128   6.07623e-04   0.021504        --    128   True   1.83%    1.26e-04   0.0226 0.0219 0.0215
+    192   6.00899e-04   0.021266    1.11%    112  False   0.35%    1.22e-04   0.0216 0.0213 0.0213
+    256   5.99587e-04   0.021219    0.22%     93  False   0.50%    9.65e-05   0.0216 0.0213 0.0212
+
+  'vs prev' is the truncation error estimate: it must SHRINK.
+  'discarded' must approach the N=8 reference 1.3e-08; while it sits
+  at 1e-05 or above, the trajectory is corrupted whatever the bond.
+  The last three stage values must settle -- at chi=128 sample 6 rose
+  37% on its final stage, which is the failure this sweep tests.
+
+Saved -> C:\Users\Niklas\Documents\Lindbladia_steady_states\Lindbladian_steady_states\experiments\results\ham_finite_size_convergence.pkl

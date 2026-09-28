@@ -99,74 +99,17 @@ INIT = "neel"
 WINDOWS = [2, 4, 6, 8]
 EPSILON = 0.20
 ATTEMPTS = 2       # determinism check, not a search -- see module docstring
-VEC_I = np.array([1.0, 0.0, 0.0, 1.0], dtype=complex)  # vec(I_2), row-major
-
-
-def a_form(state: "imps.iMPS") -> dict:
-    """Left-weighted (A-form) unit-cell tensors: A_A = Lambda_B Gamma_A, etc."""
-    return {"A": imps.left_weighted(state.Gamma["A"], state.Lambda["B"]),
-            "B": imps.left_weighted(state.Gamma["B"], state.Lambda["A"])}
-
-
-def trace_map(theta: np.ndarray) -> np.ndarray:
-    """M[l,r] = sum_s theta[l,s,r] vec(I)[s] -- one site's contribution to Tr[rho]."""
-    return np.tensordot(theta, VEC_I, axes=([1], [0]))
-
-
-def environments(Theta: dict) -> tuple[np.ndarray, np.ndarray]:
-    """Leading left/right eigenvectors of the unit-cell trace map M_A M_B.
-
-    These are the partial trace of the infinite tails to either side of the
-    window. Solved densely: M is chi x chi with chi <= ~30 here.
-    """
-    M = trace_map(Theta["A"]) @ trace_map(Theta["B"])
-    wr, vr = np.linalg.eig(M)
-    wl, vl = np.linalg.eig(M.T)
-    v_R = vr[:, np.argmax(np.abs(wr))]
-    v_L = vl[:, np.argmax(np.abs(wl))]
-    return v_L, v_R
-
-
-def reduced_density_matrix(state: "imps.iMPS", n_sites: int) -> np.ndarray:
-    """True n-site reduced density matrix of the infinite chain, trace-normalized.
-
-    Input: a canonicalize()'d iMPS over vec(rho); n_sites (even).
-    Output: (2**n_sites, 2**n_sites) complex array with unit trace.
-    """
-    Theta = a_form(state)
-    v_L, v_R = environments(Theta)
-
-    # Contract the window, carrying the physical (vectorized) legs.
-    block = v_L.reshape(1, -1)                       # (phys_so_far=1, chi)
-    for k in range(n_sites):
-        th = Theta["A" if k % 2 == 0 else "B"]       # (chi_l, 4, chi_r)
-        block = np.tensordot(block, th, axes=([-1], [0]))   # (..., 4, chi_r)
-        block = block.reshape(-1, block.shape[-1])
-    rho = (block @ v_R).reshape((2, 2) * n_sites)    # (ket_1,bra_1, ket_2,bra_2, ...)
-
-    # (ket_1,bra_1,...) -> (ket_1..ket_n, bra_1..bra_n)
-    perm = list(range(0, 2 * n_sites, 2)) + list(range(1, 2 * n_sites, 2))
-    rho = np.transpose(rho, perm).reshape(2 ** n_sites, 2 ** n_sites)
-
-    tr = np.trace(rho)
-    if abs(tr) > 1e-300:
-        rho = rho / tr
-    return rho
-
-
-def diagnose(rho: np.ndarray) -> dict:
-    """Hermiticity and positivity of a trace-normalized rho."""
-    herm = np.linalg.norm(rho - rho.conj().T) / max(np.linalg.norm(rho), 1e-300)
-    w = np.linalg.eigvalsh(0.5 * (rho + rho.conj().T))
-    neg = w[w < 0].sum()
-    return {
-        "hermiticity_error": float(herm),
-        "min_eig": float(w.min()),
-        "max_eig": float(w.max()),
-        "negative_weight": float(abs(neg) / np.abs(w).sum()),
-        "eigenvalues": w,
-        "purity": float(np.trace(rho.conj().T @ rho).real),
-    }
+# The window-RDM machinery moved to lindblad_mps.iobservables (2026-09-19) so
+# that the Hamiltonian-perturbation study and the iTEBD validation tests can
+# reach it without importing an experiment module. Imported under the old names
+# so the rest of this script is unchanged.
+from lindblad_mps.iobservables import (  # noqa: E402
+    a_form,
+    environments,
+    rdm_diagnostics as diagnose,
+    reduced_density_matrix,
+    trace_map,
+)
 
 
 def _validate() -> None:

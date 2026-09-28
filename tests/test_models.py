@@ -172,3 +172,85 @@ class TestPauliDecomposition:
         M = models.kron(models.X, models.I2)
         with pytest.raises(AssertionError):
             models.pauli_string_decomposition(M)
+
+
+class TestRandomZZCommutingHermitianOperator:
+    """The Hamiltonian perturbation ensemble: h = h^dagger, [h, Z(x)Z] = 0,
+    traceless, ||h|| = epsilon."""
+
+    EPSILON = 0.2
+
+    def draw(self, seed: int = 0, epsilon: float | None = None, **kw) -> np.ndarray:
+        rng = np.random.default_rng(1234 + seed)
+        eps = self.EPSILON if epsilon is None else epsilon
+        return models.random_zz_commuting_hermitian_operator(eps, rng, **kw)
+
+    @pytest.mark.parametrize("seed", range(5))
+    def test_is_hermitian(self, seed):
+        h = self.draw(seed)
+        assert np.allclose(h, h.conj().T)
+
+    @pytest.mark.parametrize("seed", range(5))
+    def test_commutes_with_zz(self, seed):
+        assert models.commutes_with_zz(self.draw(seed))
+
+    @pytest.mark.parametrize("N", [2, 3, 4])
+    def test_embedded_commutes_with_global_parity(self, N):
+        from lindblad_mps import vectorize
+
+        P = global_parity(N)
+        O = vectorize.embed_bond_operator(self.draw(0), 0, N)
+        assert np.allclose(O @ P, P @ O)
+
+    @pytest.mark.parametrize("seed", range(5))
+    def test_operator_norm_is_epsilon(self, seed):
+        assert models.operator_norm(self.draw(seed)) == pytest.approx(self.EPSILON)
+
+    @pytest.mark.parametrize("seed", range(5))
+    def test_traceless_by_default(self, seed):
+        assert abs(np.trace(self.draw(seed))) < 1e-12
+
+    def test_trace_can_be_kept(self):
+        # Not the production convention, but the flag must do what it says:
+        # over several draws at least one keeps a clearly nonzero trace.
+        traces = [abs(np.trace(self.draw(s, traceless=False))) for s in range(5)]
+        assert max(traces) > 1e-3
+
+    def test_deterministic_given_a_seed(self):
+        assert np.array_equal(self.draw(3), self.draw(3))
+
+    @pytest.mark.parametrize("seed", range(5))
+    def test_pauli_coefficients_are_real_and_only_on_allowed_strings(self, seed):
+        # pauli_string_decomposition already asserts the parity-forbidden
+        # strings vanish; Hermiticity additionally forces the eight allowed
+        # coefficients to be real, which is what makes the ensemble 8 (here,
+        # traceless, 7) REAL dimensional rather than 8 complex.
+        coeffs = models.pauli_string_decomposition(self.draw(seed))
+        assert set(coeffs) == {a + b for a, b in models.ZZ_COMMUTING_STRINGS}
+        assert max(abs(c.imag) for c in coeffs.values()) < 1e-12
+
+    @pytest.mark.parametrize("seed", range(5))
+    def test_pair_creation_element_matches_its_pauli_expression(self, seed):
+        # <11|h|00> = a_XX - a_YY + i(a_XY + a_YX); the diagonal {I,Z}(x){I,Z}
+        # strings cannot contribute. This identity is what the study reports
+        # its amplitudes with, so it is worth pinning.
+        h = self.draw(seed)
+        c = models.pauli_string_decomposition(h)
+        expected = c["XX"] - c["YY"] + 1j * (c["XY"] + c["YX"])
+        assert models.pair_creation_element(h) == pytest.approx(expected)
+
+    @pytest.mark.parametrize("seed", range(5))
+    def test_epsilon_rescaling_is_direction_preserving(self, seed):
+        # The whole R ~ epsilon^2 claim rests on the rescaling changing only the
+        # norm: |c(eps)|^2 must scale as eps^2 EXACTLY, so that a measured
+        # departure from eps^2 is physics and not a property of the draw.
+        h1, h2 = self.draw(seed, epsilon=0.2), self.draw(seed, epsilon=0.05)
+        assert np.allclose(h2, h1 * (0.05 / 0.2))
+        c1 = abs(models.pair_creation_element(h1)) ** 2
+        c2 = abs(models.pair_creation_element(h2)) ** 2
+        assert c2 / c1 == pytest.approx((0.05 / 0.2) ** 2)
+
+    def test_pair_creation_element_is_generically_nonzero(self):
+        # If it vanished, the Hamiltonian perturbation would not destabilize
+        # the dark vacuum at all and the study would have no signal.
+        assert min(abs(models.pair_creation_element(self.draw(s))) for s in range(10)) > 1e-3

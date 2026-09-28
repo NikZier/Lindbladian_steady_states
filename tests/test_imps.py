@@ -544,3 +544,105 @@ class TestArpackDeterminism:
         assert len(a_A) == len(b_A) and len(a_B) == len(b_B)
         assert np.allclose(a_A, b_A, rtol=0, atol=1e-13), "Lambda_A differs across seeds"
         assert np.allclose(a_B, b_B, rtol=0, atol=1e-13), "Lambda_B differs across seeds"
+
+
+class TestHamiltonianEvolutionInfinite:
+    """evolve_infinite driven by a HAMILTONIAN, against an exact analytic answer.
+
+    Until the Hamiltonian-perturbation study (experiments/imps_ham_eps_grid.py)
+    every iTEBD call in this repo passed H2_terms=[], so the infinite driver had
+    never been run with a Hamiltonian at all. A finite-chain cross-check is not
+    available for this: the Renyi-2 correlator's denominator Tr[rho^dag rho] is
+    a GLOBAL quantity, so a finite chain's R does not approach the infinite
+    chain's at short times no matter how long the chain is (measured: 49-71%
+    apart at N=16, and not shrinking with N). The test below avoids the problem
+    entirely by using a case with a closed-form answer.
+
+    The case: h = X (x) X on every bond, no dissipation, from |0...0>. All bond
+    terms commute with each other, so
+      * the second-order Trotter split is EXACT at any dt, and
+      * Heisenberg evolution of Z_j is two-bond local:
+            Z_j(t) = Z_j (cos2t - i sin2t X_{j-1}X_j)(cos2t - i sin2t X_j X_{j+1})
+        whose |0...0> expectation keeps only the cos^2 term (every other term
+        carries unpaired X's), giving
+
+            <Z_j>(t) = <Z_j Z_{j+1}>(t) = cos^2(2t)
+
+    X (x) X is a genuine member of the study's ensemble (it commutes with Z(x)Z
+    and is Hermitian), so this exercises the production code path, not a
+    special case bolted on beside it.
+    """
+
+    ZI = np.kron(models.Z, np.eye(2, dtype=complex))
+    ZZ = np.kron(models.Z, models.Z)
+
+    @pytest.mark.parametrize("dt,n_steps", [(0.1, 5), (0.05, 10), (0.25, 2)])
+    def test_commuting_ising_matches_closed_form(self, dt, n_steps):
+        t = dt * n_steps
+        XX = np.kron(models.X, models.X)
+
+        state = imps.iMPS.pure_product_state(KET0, KET0)
+        itebd.evolve_infinite(
+            state, [(XX, 1.0)], [], [], [],
+            dt=dt, n_steps=n_steps, chi_max=64, cutoff=1e-13, canonicalize_every=1,
+        )
+        state.canonicalize(chi_max=64, cutoff=1e-13)
+        rho = iobservables.reduced_density_matrix(state, 2)
+
+        expected = np.cos(2 * t) ** 2
+        assert np.trace(rho @ self.ZI).real == pytest.approx(expected, abs=1e-10)
+        assert np.trace(rho @ self.ZZ).real == pytest.approx(expected, abs=1e-10)
+
+    def test_diagonal_hamiltonian_leaves_a_basis_state_stationary(self):
+        # h = Z (x) Z is diagonal, so -i[H, rho] vanishes identically on any
+        # computational-basis rho. Catches a gate that "evolves" a state it
+        # must leave alone -- e.g. from a dropped conjugate in the I (x) H^T
+        # term, which would turn the commutator into an anticommutator.
+        state = imps.iMPS.pure_product_state(KET0, KET1)
+        before = iobservables.reduced_density_matrix(state, 2)
+        itebd.evolve_infinite(
+            state, [(np.kron(models.Z, models.Z), 1.0)], [], [], [],
+            dt=0.2, n_steps=10, chi_max=16, cutoff=1e-13, canonicalize_every=2,
+        )
+        state.canonicalize(chi_max=16, cutoff=1e-13)
+        assert np.allclose(iobservables.reduced_density_matrix(state, 2), before, atol=1e-10)
+
+    def test_hamiltonian_perturbed_baseline_keeps_rho_physical_at_short_time(self):
+        # The production combination: baseline dissipation + a random Hermitian
+        # perturbation, from the dark vacuum. Trace, Hermiticity and positivity
+        # of the true 4-site window RDM are the properties a Hamiltonian term
+        # cannot be allowed to break (see CLAUDE.md, Trap 3, for what it looks
+        # like when they do break).
+        h = models.random_zz_commuting_hermitian_operator(0.2, np.random.default_rng(5))
+        L, L_prime = models.baseline_jump_operators()
+        state = imps.iMPS.pure_product_state(KET0, KET0)
+        itebd.evolve_infinite(
+            state, [(h, 1.0)], [], [(L, 1.0), (L_prime, 1.0)], [],
+            dt=0.05, n_steps=60, chi_max=32, cutoff=1e-12, canonicalize_every=5,
+        )
+        state.canonicalize(chi_max=32, cutoff=1e-12)
+        rho = iobservables.reduced_density_matrix(state, 4)
+
+        assert np.trace(rho).real == pytest.approx(1.0)
+        assert np.linalg.norm(rho - rho.conj().T) < 1e-8
+        assert np.linalg.eigvalsh(0.5 * (rho + rho.conj().T)).min() > -1e-8
+
+    def test_correlator_is_driven_by_the_hamiltonian_and_vanishes_without_it(self):
+        # |0...0> is a dark state of the baseline, so R must stay exactly 0
+        # with h = 0 and become nonzero with h != 0. This is the study's
+        # false-positive floor and its signal, in one test.
+        L, L_prime = models.baseline_jump_operators()
+        L2 = [(L, 1.0), (L_prime, 1.0)]
+        h = models.random_zz_commuting_hermitian_operator(0.2, np.random.default_rng(5))
+
+        def run(H2):
+            state = imps.iMPS.pure_product_state(KET0, KET0)
+            itebd.evolve_infinite(
+                state, H2, [], L2, [], dt=0.05, n_steps=60,
+                chi_max=32, cutoff=1e-12, canonicalize_every=5,
+            )
+            state.canonicalize(chi_max=32, cutoff=1e-12)
+            return dict(iobservables.correlator_profile(state, models.X, r_max=4))[2]
+
+        assert abs(run([])) < 1e-14
+        assert run([(h, 1.0)]) > 1e-8

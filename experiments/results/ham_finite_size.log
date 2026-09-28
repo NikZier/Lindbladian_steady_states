@@ -1,0 +1,253 @@
+Computing exact reference (dense sector solves) ...
+  80 exact solves in 253.1s
+
+============================================================================================
+EXACT sector solve -- R/|c|^2 (the epsilon exponent) and gap_rate
+============================================================================================
+  N    eps   mean R/|c|^2    spread  mean gap_rate    spread
+  4   0.20       0.023074    0.22%         3.0608    0.29%
+  4   0.15       0.023088    0.12%         3.0586    0.16%
+  4   0.10       0.023098    0.05%         3.0570    0.07%
+  4   0.05       0.023104    0.01%         3.0560    0.02%
+  6   0.20       0.021570    0.24%         1.2781    0.48%
+  6   0.15       0.021585    0.13%         1.2766    0.27%
+  6   0.10       0.021595    0.06%         1.2755    0.12%
+  6   0.05       0.021601    0.01%         1.2749    0.03%
+
+  R/|c|^2 flat in epsilon at fixed N  <=>  R ~ epsilon^2, since
+  |c|^2 ~ epsilon^2 by construction. No fit, no schedule, no truncation.
+  gap_rate flat in epsilon is what licenses ONE schedule for all epsilon.
+
+167 grid jobs on 12 workers, chi=128.
+
+     grid eps=0.15   s1 N= 12 chi=128  R=  9.4863e-05  bond= 79   drift=  0.44%  [31.4min, elapsed 31.4min]
+     grid eps=0.20   s5 N= 12 chi=128  R=  7.3447e-05  bond= 78   drift=  2.86%  [31.5min, elapsed 31.5min]
+     grid eps=0.20   s4 N= 12 chi=128  R=  4.7963e-05  bond= 71   drift=  1.72%  [31.6min, elapsed 31.6min]
+     grid eps=0.20   s1 N= 12 chi=128  R=  1.6972e-04  bond= 86   drift=  2.51%  [31.6min, elapsed 31.6min]
+     grid eps=0.20   s6 N= 12 chi=128  R=  3.3324e-04  bond=110   drift=  1.62%  [31.7min, elapsed 31.7min]
+     grid eps=0.15   s0 N= 12 chi=128  R=  3.5034e-04  bond=109   drift=  1.30%  [31.8min, elapsed 31.8min]
+     grid eps=0.20   s2 N= 12 chi=128  R=  2.1014e-04  bond= 93   drift=  1.86%  [31.8min, elapsed 31.8min]
+     grid eps=0.20   s3 N= 12 chi=128  R=  2.2297e-04  bond= 89   drift=  1.84%  [31.9min, elapsed 31.9min]
+     grid eps=0.20   s0 N= 12 chi=128  R=  6.1921e-04  bond=128*  drift=  1.52%  [32.0min, elapsed 32.0min]
+     grid eps=0.20   s9 N= 12 chi=128  R=  6.0762e-04  bond=128*  drift=  1.83%  [32.1min, elapsed 32.1min]
+     grid eps=0.20   s8 N= 12 chi=128  R=  3.8809e-04  bond=113   drift=  1.38%  [32.2min, elapsed 32.2min]
+     grid eps=0.20   s7 N= 12 chi=128  R=  5.5320e-04  bond=127   drift=  1.11%  [32.2min, elapsed 32.2min]
+     grid eps=0.15   s4 N= 12 chi=128  R=  2.9817e-05  bond= 50   drift= 15.59%  [31.0min, elapsed 62.6min]
+     grid eps=0.15   s3 N= 12 chi=128  R=  1.2588e-04  bond= 80   drift=  1.53%  [31.2min, elapsed 62.7min]
+     grid eps=0.15   s5 N= 12 chi=128  R=  4.0399e-05  bond= 65   drift=  2.94%  [31.1min, elapsed 62.8min]
+     grid eps=0.15   s2 N= 12 chi=128  R=  1.1813e-04  bond= 82   drift=  3.27%  [31.4min, elapsed 62.8min]
+     grid eps=0.15   s6 N= 12 chi=128  R=  1.8772e-04  bond= 87   drift=  1.95%  [31.3min, elapsed 63.1min]
+     grid eps=0.10   s1 N= 12 chi=128  R=  4.3116e-05  bond= 65   drift=  3.83%  [31.0min, elapsed 63.1min]
+     grid eps=0.10   s2 N= 12 chi=128  R=  5.3767e-05  bond= 73   drift=  0.48%  [30.9min, elapsed 63.1min]
+     grid eps=0.10   s3 N= 12 chi=128  R=  5.5033e-05  bond= 72   drift=  2.12%  [31.0min, elapsed 63.2min]
+     grid eps=0.10   s0 N= 12 chi=128  R=  1.5453e-04  bond= 81   drift=  1.42%  [31.2min, elapsed 63.2min]
+     grid eps=0.15   s7 N= 12 chi=128  R=  3.1231e-04  bond=102   drift=  1.34%  [31.5min, elapsed 63.2min]
+     grid eps=0.15   s8 N= 12 chi=128  R=  2.1750e-04  bond= 89   drift=  1.60%  [31.4min, elapsed 63.3min]
+     grid eps=0.15   s9 N= 12 chi=128  R=  3.4526e-04  bond=114   drift=  1.63%  [31.5min, elapsed 63.4min]
+     grid eps=0.10   s4 N= 12 chi=128  R=  1.3181e-05  bond= 42   drift= 10.91%  [30.6min, elapsed 93.3min]
+     grid eps=0.10   s5 N= 12 chi=128  R=  2.2523e-05  bond= 44   drift= 21.21%  [30.7min, elapsed 93.4min]
+     grid eps=0.05   s4 N= 12 chi=128  R=  3.6972e-06  bond= 40   drift=  0.56%  [30.4min, elapsed 93.6min]
+     grid eps=0.05   s1 N= 12 chi=128  R=  1.1518e-05  bond= 44   drift=  7.29%  [30.5min, elapsed 93.7min]
+     grid eps=0.10   s6 N= 12 chi=128  R=  8.3491e-05  bond= 78   drift=  0.59%  [31.0min, elapsed 93.7min]
+  control eps=0.00 ctrl N= 12 chi=128  R=  0.0000e+00  bond=  1   drift=  0.00%  [0.0min, elapsed 93.8min]
+     grid eps=0.05   s3 N= 12 chi=128  R=  1.7737e-05  bond= 43   drift= 13.51%  [30.6min, elapsed 93.8min]
+     grid eps=0.05   s5 N= 12 chi=128  R=  4.8994e-06  bond= 41   drift=  1.86%  [30.4min, elapsed 93.8min]
+     grid eps=0.05   s2 N= 12 chi=128  R=  1.5594e-05  bond= 44   drift=  7.40%  [30.6min, elapsed 93.9min]
+     grid eps=0.05   s0 N= 12 chi=128  R=  4.0057e-05  bond= 64   drift=  2.27%  [30.8min, elapsed 93.9min]
+     grid eps=0.10   s7 N= 12 chi=128  R=  1.3898e-04  bond= 82   drift=  0.78%  [31.1min, elapsed 93.9min]
+     grid eps=0.10   s8 N= 12 chi=128  R=  9.7652e-05  bond= 78   drift=  1.17%  [31.0min, elapsed 94.0min]
+     grid eps=0.10   s9 N= 12 chi=128  R=  1.5159e-04  bond= 83   drift=  2.65%  [31.2min, elapsed 94.3min]
+     grid eps=0.20   s0 N=  8 chi=128  R=  6.1604e-04  bond= 67   drift=  0.06%  [2.4min, elapsed 96.2min]
+     grid eps=0.20   s2 N=  8 chi=128  R=  2.0635e-04  bond= 53   drift=  0.05%  [2.3min, elapsed 96.2min]
+     grid eps=0.20   s1 N=  8 chi=128  R=  1.6897e-04  bond= 47   drift=  0.04%  [2.4min, elapsed 96.3min]
+     grid eps=0.20   s3 N=  8 chi=128  R=  2.2060e-04  bond= 50   drift=  0.05%  [2.3min, elapsed 96.4min]
+     grid eps=0.20   s4 N=  8 chi=128  R=  4.5575e-05  bond= 34   drift=  0.05%  [2.3min, elapsed 96.6min]
+     grid eps=0.20   s5 N=  8 chi=128  R=  7.0154e-05  bond= 41   drift=  0.05%  [2.4min, elapsed 98.6min]
+     grid eps=0.20   s6 N=  8 chi=128  R=  3.2749e-04  bond= 55   drift=  0.04%  [2.5min, elapsed 98.7min]
+     grid eps=0.20   s7 N=  8 chi=128  R=  5.4832e-04  bond= 57   drift=  0.05%  [2.4min, elapsed 98.7min]
+     grid eps=0.20   s8 N=  8 chi=128  R=  3.8257e-04  bond= 57   drift=  0.04%  [2.5min, elapsed 98.8min]
+     grid eps=0.20   s9 N=  8 chi=128  R=  6.0158e-04  bond= 69   drift=  0.05%  [2.5min, elapsed 99.1min]
+     grid eps=0.15   s0 N=  8 chi=128  R=  3.4659e-04  bond= 54   drift=  0.05%  [2.4min, elapsed 101.0min]
+     grid eps=0.15   s2 N=  8 chi=128  R=  1.1618e-04  bond= 44   drift=  0.04%  [2.4min, elapsed 101.1min]
+     grid eps=0.15   s1 N=  8 chi=128  R=  9.5090e-05  bond= 39   drift=  0.04%  [2.4min, elapsed 101.2min]
+     grid eps=0.15   s3 N=  8 chi=128  R=  1.2422e-04  bond= 41   drift=  0.05%  [2.4min, elapsed 101.2min]
+     grid eps=0.15   s4 N=  8 chi=128  R=  2.5639e-05  bond= 31   drift=  0.05%  [2.4min, elapsed 101.5min]
+     grid eps=0.15   s5 N=  8 chi=128  R=  3.9470e-05  bond= 33   drift=  0.05%  [2.3min, elapsed 103.4min]
+     grid eps=0.15   s6 N=  8 chi=128  R=  1.8448e-04  bond= 48   drift=  0.04%  [2.4min, elapsed 103.5min]
+     grid eps=0.15   s8 N=  8 chi=128  R=  2.1527e-04  bond= 49   drift=  0.05%  [2.4min, elapsed 103.6min]
+     grid eps=0.15   s7 N=  8 chi=128  R=  3.0871e-04  bond= 52   drift=  0.05%  [2.5min, elapsed 103.6min]
+     grid eps=0.15   s9 N=  8 chi=128  R=  3.3840e-04  bond= 58   drift=  0.05%  [2.5min, elapsed 103.9min]
+     grid eps=0.10   s0 N=  8 chi=128  R=  1.5409e-04  bond= 43   drift=  0.05%  [2.4min, elapsed 105.8min]
+     grid eps=0.10   s1 N=  8 chi=128  R=  4.2276e-05  bond= 30   drift=  0.05%  [2.3min, elapsed 105.8min]
+     grid eps=0.10   s3 N=  8 chi=128  R=  5.5254e-05  bond= 31   drift=  0.05%  [2.3min, elapsed 106.0min]
+     grid eps=0.10   s2 N=  8 chi=128  R=  5.1683e-05  bond= 33   drift=  0.05%  [2.4min, elapsed 106.0min]
+     grid eps=0.10   s4 N=  8 chi=128  R=  1.1396e-05  bond= 25   drift=  0.05%  [2.2min, elapsed 106.2min]
+     grid eps=0.10   s5 N=  8 chi=128  R=  1.7545e-05  bond= 28   drift=  0.05%  [2.3min, elapsed 108.1min]
+     grid eps=0.10   s6 N=  8 chi=128  R=  8.2050e-05  bond= 38   drift=  0.05%  [2.4min, elapsed 108.2min]
+     grid eps=0.10   s7 N=  8 chi=128  R=  1.3729e-04  bond= 40   drift=  0.05%  [2.4min, elapsed 108.3min]
+     grid eps=0.10   s8 N=  8 chi=128  R=  9.5699e-05  bond= 36   drift=  0.05%  [2.4min, elapsed 108.4min]
+     grid eps=0.10   s9 N=  8 chi=128  R=  1.5034e-04  bond= 48   drift=  0.04%  [2.4min, elapsed 108.6min]
+     grid eps=0.05   s1 N=  8 chi=128  R=  1.0571e-05  bond= 25   drift=  0.05%  [2.2min, elapsed 110.4min]
+     grid eps=0.05   s0 N=  8 chi=128  R=  3.8529e-05  bond= 28   drift=  0.05%  [2.3min, elapsed 110.4min]
+     grid eps=0.05   s2 N=  8 chi=128  R=  1.2927e-05  bond= 25   drift=  0.05%  [2.2min, elapsed 110.5min]
+     grid eps=0.05   s4 N=  8 chi=128  R=  2.8493e-06  bond= 19   drift=  0.05%  [2.0min, elapsed 110.6min]
+     grid eps=0.05   s3 N=  8 chi=128  R=  1.3820e-05  bond= 25   drift=  0.05%  [2.3min, elapsed 110.7min]
+     grid eps=0.05   s5 N=  8 chi=128  R=  4.3869e-06  bond= 21   drift=  0.05%  [2.1min, elapsed 112.5min]
+  control eps=0.00 ctrl N=  8 chi=128  R=  0.0000e+00  bond=  1   drift=  0.00%  [0.0min, elapsed 112.5min]
+     grid eps=0.20   s0 N=  6 chi=128  R=  6.2502e-04  bond= 52   drift=  0.04%  [0.1min, elapsed 112.6min]
+     grid eps=0.05   s6 N=  8 chi=128  R=  2.0523e-05  bond= 29   drift=  0.05%  [2.3min, elapsed 112.7min]
+     grid eps=0.20   s1 N=  6 chi=128  R=  1.7153e-04  bond= 42   drift=  0.04%  [0.1min, elapsed 112.8min]
+     grid eps=0.20   s2 N=  6 chi=128  R=  2.0945e-04  bond= 47   drift=  0.04%  [0.1min, elapsed 112.8min]
+     grid eps=0.05   s7 N=  8 chi=128  R=  3.4332e-05  bond= 28   drift=  0.05%  [2.3min, elapsed 112.9min]
+     grid eps=0.20   s3 N=  6 chi=128  R=  2.2390e-04  bond= 45   drift=  0.04%  [0.1min, elapsed 112.9min]
+     grid eps=0.20   s4 N=  6 chi=128  R=  4.6263e-05  bond= 32   drift=  0.04%  [0.1min, elapsed 112.9min]
+     grid eps=0.20   s5 N=  6 chi=128  R=  7.1209e-05  bond= 36   drift=  0.04%  [0.1min, elapsed 113.0min]
+     grid eps=0.05   s8 N=  8 chi=128  R=  2.3928e-05  bond= 28   drift=  0.05%  [2.4min, elapsed 113.0min]
+     grid eps=0.20   s6 N=  6 chi=128  R=  3.3248e-04  bond= 47   drift=  0.04%  [0.1min, elapsed 113.0min]
+     grid eps=0.20   s7 N=  6 chi=128  R=  5.5641e-04  bond= 48   drift=  0.04%  [0.1min, elapsed 113.0min]
+     grid eps=0.05   s9 N=  8 chi=128  R=  3.7592e-05  bond= 32   drift=  0.05%  [2.4min, elapsed 113.0min]
+     grid eps=0.20   s8 N=  6 chi=128  R=  3.8824e-04  bond= 48   drift=  0.04%  [0.1min, elapsed 113.1min]
+     grid eps=0.20   s9 N=  6 chi=128  R=  6.1018e-04  bond= 54   drift=  0.04%  [0.1min, elapsed 113.1min]
+     grid eps=0.15   s0 N=  6 chi=128  R=  3.5176e-04  bond= 47   drift=  0.04%  [0.1min, elapsed 113.1min]
+     grid eps=0.15   s1 N=  6 chi=128  R=  9.6527e-05  bond= 35   drift=  0.04%  [0.1min, elapsed 113.1min]
+     grid eps=0.15   s2 N=  6 chi=128  R=  1.1795e-04  bond= 39   drift=  0.04%  [0.1min, elapsed 113.1min]
+     grid eps=0.15   s3 N=  6 chi=128  R=  1.2609e-04  bond= 37   drift=  0.04%  [0.1min, elapsed 113.2min]
+     grid eps=0.15   s5 N=  6 chi=128  R=  4.0066e-05  bond= 34   drift=  0.04%  [0.1min, elapsed 113.2min]
+     grid eps=0.15   s4 N=  6 chi=128  R=  2.6026e-05  bond= 32   drift=  0.04%  [0.1min, elapsed 113.2min]
+     grid eps=0.15   s6 N=  6 chi=128  R=  1.8724e-04  bond= 44   drift=  0.04%  [0.1min, elapsed 113.2min]
+     grid eps=0.15   s7 N=  6 chi=128  R=  3.1329e-04  bond= 47   drift=  0.04%  [0.1min, elapsed 113.2min]
+     grid eps=0.15   s8 N=  6 chi=128  R=  2.1849e-04  bond= 42   drift=  0.04%  [0.1min, elapsed 113.3min]
+     grid eps=0.10   s0 N=  6 chi=128  R=  1.5640e-04  bond= 36   drift=  0.04%  [0.1min, elapsed 113.3min]
+     grid eps=0.15   s9 N=  6 chi=128  R=  3.4332e-04  bond= 49   drift=  0.04%  [0.1min, elapsed 113.3min]
+     grid eps=0.10   s1 N=  6 chi=128  R=  4.2914e-05  bond= 30   drift=  0.04%  [0.1min, elapsed 113.3min]
+     grid eps=0.10   s2 N=  6 chi=128  R=  5.2462e-05  bond= 32   drift=  0.04%  [0.1min, elapsed 113.3min]
+     grid eps=0.10   s3 N=  6 chi=128  R=  5.6086e-05  bond= 28   drift=  0.04%  [0.1min, elapsed 113.4min]
+     grid eps=0.10   s4 N=  6 chi=128  R=  1.1568e-05  bond= 25   drift=  0.04%  [0.1min, elapsed 113.4min]
+     grid eps=0.10   s5 N=  6 chi=128  R=  1.7810e-05  bond= 28   drift=  0.04%  [0.1min, elapsed 113.4min]
+     grid eps=0.10   s6 N=  6 chi=128  R=  8.3287e-05  bond= 35   drift=  0.04%  [0.1min, elapsed 113.4min]
+     grid eps=0.10   s7 N=  6 chi=128  R=  1.3934e-04  bond= 35   drift=  0.04%  [0.1min, elapsed 113.4min]
+     grid eps=0.10   s8 N=  6 chi=128  R=  9.7136e-05  bond= 34   drift=  0.04%  [0.1min, elapsed 113.5min]
+     grid eps=0.05   s0 N=  6 chi=128  R=  3.9109e-05  bond= 28   drift=  0.04%  [0.1min, elapsed 113.5min]
+     grid eps=0.05   s1 N=  6 chi=128  R=  1.0731e-05  bond= 24   drift=  0.04%  [0.1min, elapsed 113.5min]
+     grid eps=0.10   s9 N=  6 chi=128  R=  1.5262e-04  bond= 40   drift=  0.04%  [0.1min, elapsed 113.5min]
+     grid eps=0.05   s2 N=  6 chi=128  R=  1.3122e-05  bond= 27   drift=  0.04%  [0.1min, elapsed 113.5min]
+     grid eps=0.05   s3 N=  6 chi=128  R=  1.4028e-05  bond= 26   drift=  0.04%  [0.1min, elapsed 113.5min]
+     grid eps=0.05   s5 N=  6 chi=128  R=  4.4531e-06  bond= 20   drift=  0.04%  [0.1min, elapsed 113.6min]
+     grid eps=0.05   s6 N=  6 chi=128  R=  2.0832e-05  bond= 28   drift=  0.04%  [0.1min, elapsed 113.6min]
+     grid eps=0.05   s4 N=  6 chi=128  R=  2.8922e-06  bond= 20   drift=  0.04%  [0.1min, elapsed 113.6min]
+     grid eps=0.20   s0 N=  4 chi=128  R=  6.6865e-04  bond= 16   drift=  0.04%  [cached, elapsed 113.6min]
+  control eps=0.00 ctrl N=  6 chi=128  R=  0.0000e+00  bond=  1   drift=  0.00%  [0.0min, elapsed 113.6min]
+     grid eps=0.20   s1 N=  4 chi=128  R=  1.8347e-04  bond= 16   drift=  0.04%  [0.0min, elapsed 113.6min]
+     grid eps=0.20   s2 N=  4 chi=128  R=  2.2406e-04  bond= 16   drift=  0.04%  [0.0min, elapsed 113.6min]
+     grid eps=0.05   s7 N=  6 chi=128  R=  3.4850e-05  bond= 28   drift=  0.04%  [0.1min, elapsed 113.6min]
+     grid eps=0.20   s3 N=  4 chi=128  R=  2.3948e-04  bond= 16   drift=  0.04%  [0.0min, elapsed 113.6min]
+     grid eps=0.20   s4 N=  4 chi=128  R=  4.9466e-05  bond= 16   drift=  0.04%  [0.0min, elapsed 113.6min]
+     grid eps=0.20   s5 N=  4 chi=128  R=  7.6172e-05  bond= 16   drift=  0.04%  [0.0min, elapsed 113.6min]
+     grid eps=0.05   s8 N=  6 chi=128  R=  2.4289e-05  bond= 28   drift=  0.04%  [0.1min, elapsed 113.6min]
+     grid eps=0.20   s6 N=  4 chi=128  R=  3.5581e-04  bond= 16   drift=  0.04%  [0.0min, elapsed 113.6min]
+     grid eps=0.20   s7 N=  4 chi=128  R=  5.9507e-04  bond= 16   drift=  0.04%  [0.0min, elapsed 113.6min]
+     grid eps=0.20   s8 N=  4 chi=128  R=  4.1519e-04  bond= 16   drift=  0.04%  [0.0min, elapsed 113.7min]
+     grid eps=0.15   s0 N=  4 chi=128  R=  3.7627e-04  bond= 16   drift=  0.04%  [0.0min, elapsed 113.7min]
+     grid eps=0.20   s9 N=  4 chi=128  R=  6.5250e-04  bond= 16   drift=  0.04%  [0.0min, elapsed 113.7min]
+     grid eps=0.15   s1 N=  4 chi=128  R=  1.0324e-04  bond= 16   drift=  0.04%  [0.0min, elapsed 113.7min]
+     grid eps=0.15   s2 N=  4 chi=128  R=  1.2615e-04  bond= 16   drift=  0.04%  [0.0min, elapsed 113.7min]
+     grid eps=0.15   s3 N=  4 chi=128  R=  1.3486e-04  bond= 16   drift=  0.04%  [0.0min, elapsed 113.7min]
+     grid eps=0.15   s4 N=  4 chi=128  R=  2.7831e-05  bond= 16   drift=  0.04%  [0.0min, elapsed 113.7min]
+     grid eps=0.05   s9 N=  6 chi=128  R=  3.8159e-05  bond= 32   drift=  0.04%  [0.1min, elapsed 113.7min]
+     grid eps=0.15   s5 N=  4 chi=128  R=  4.2855e-05  bond= 16   drift=  0.04%  [0.0min, elapsed 113.7min]
+     grid eps=0.15   s6 N=  4 chi=128  R=  2.0032e-04  bond= 16   drift=  0.04%  [0.0min, elapsed 113.7min]
+     grid eps=0.15   s7 N=  4 chi=128  R=  3.3506e-04  bond= 16   drift=  0.04%  [0.0min, elapsed 113.7min]
+     grid eps=0.15   s8 N=  4 chi=128  R=  2.3366e-04  bond= 16   drift=  0.04%  [0.0min, elapsed 113.7min]
+     grid eps=0.15   s9 N=  4 chi=128  R=  3.6716e-04  bond= 16   drift=  0.04%  [0.0min, elapsed 113.7min]
+     grid eps=0.10   s0 N=  4 chi=128  R=  1.6728e-04  bond= 16   drift=  0.04%  [0.0min, elapsed 113.7min]
+     grid eps=0.10   s2 N=  4 chi=128  R=  5.6109e-05  bond= 16   drift=  0.04%  [0.0min, elapsed 113.7min]
+     grid eps=0.10   s1 N=  4 chi=128  R=  4.5897e-05  bond= 16   drift=  0.04%  [0.0min, elapsed 113.7min]
+     grid eps=0.10   s3 N=  4 chi=128  R=  5.9984e-05  bond= 16   drift=  0.04%  [0.0min, elapsed 113.7min]
+     grid eps=0.10   s4 N=  4 chi=128  R=  1.2371e-05  bond= 15   drift=  0.04%  [0.0min, elapsed 113.7min]
+     grid eps=0.10   s5 N=  4 chi=128  R=  1.9049e-05  bond= 16   drift=  0.04%  [0.0min, elapsed 113.7min]
+     grid eps=0.10   s8 N=  4 chi=128  R=  1.0388e-04  bond= 16   drift=  0.04%  [0.0min, elapsed 113.7min]
+     grid eps=0.10   s6 N=  4 chi=128  R=  8.9088e-05  bond= 16   drift=  0.04%  [0.0min, elapsed 113.7min]
+     grid eps=0.10   s7 N=  4 chi=128  R=  1.4902e-04  bond= 16   drift=  0.04%  [0.0min, elapsed 113.7min]
+     grid eps=0.10   s9 N=  4 chi=128  R=  1.6322e-04  bond= 16   drift=  0.04%  [0.0min, elapsed 113.7min]
+     grid eps=0.05   s0 N=  4 chi=128  R=  4.1828e-05  bond= 16   drift=  0.04%  [0.0min, elapsed 113.7min]
+     grid eps=0.05   s2 N=  4 chi=128  R=  1.4034e-05  bond= 15   drift=  0.04%  [0.0min, elapsed 113.7min]
+     grid eps=0.05   s3 N=  4 chi=128  R=  1.5003e-05  bond= 16   drift=  0.04%  [0.0min, elapsed 113.7min]
+     grid eps=0.05   s1 N=  4 chi=128  R=  1.1476e-05  bond= 15   drift=  0.04%  [0.0min, elapsed 113.7min]
+     grid eps=0.05   s4 N=  4 chi=128  R=  3.0932e-06  bond= 15   drift=  0.04%  [0.0min, elapsed 113.7min]
+     grid eps=0.05   s5 N=  4 chi=128  R=  4.7626e-06  bond= 15   drift=  0.04%  [0.0min, elapsed 113.8min]
+  control eps=0.00 ctrl N=  4 chi=128  R=  0.0000e+00  bond=  1   drift=  0.00%  [cached, elapsed 113.8min]
+     grid eps=0.05   s6 N=  4 chi=128  R=  2.2281e-05  bond= 16   drift=  0.04%  [0.0min, elapsed 113.8min]
+     grid eps=0.05   s7 N=  4 chi=128  R=  3.7272e-05  bond= 16   drift=  0.04%  [0.0min, elapsed 113.8min]
+     grid eps=0.05   s8 N=  4 chi=128  R=  2.5977e-05  bond= 16   drift=  0.04%  [0.0min, elapsed 113.8min]
+     grid eps=0.05   s9 N=  4 chi=128  R=  4.0810e-05  bond= 16   drift=  0.04%  [0.0min, elapsed 113.8min]
+     grid eps=0.05   s6 N= 12 chi=128  R=  2.9558e-05  bond= 47   drift= 27.15%  [29.2min, elapsed 122.4min]
+     grid eps=0.05   s7 N= 12 chi=128  R=  3.6968e-05  bond= 62   drift=  6.49%  [29.2min, elapsed 122.6min]
+     neel eps=0.20   s4 N= 12 chi=128  R=  4.7415e-05  bond= 72   drift=  0.32%  [28.9min, elapsed 122.7min]
+     grid eps=0.05   s8 N= 12 chi=128  R=  3.0447e-05  bond= 49   drift= 21.73%  [29.2min, elapsed 122.8min]
+     grid eps=0.05   s9 N= 12 chi=128  R=  4.2932e-05  bond= 64   drift=  3.04%  [29.2min, elapsed 122.9min]
+     neel eps=0.20   s6 N= 12 chi=128  R=  3.3254e-04  bond=109   drift=  1.73%  [29.7min, elapsed 123.5min]
+     neel eps=0.20   s0 N= 12 chi=128  R=  6.1347e-04  bond=128*  drift=  2.09%  [29.9min, elapsed 123.7min]
+
+167/167 succeeded in 123.7 min.
+
+============================================================================================
+VALIDATION -- TEBD vs exact (certifies schedule AND truncation)
+============================================================================================
+  N    eps  max |rel err|  mean |rel err|  max bond  at cap
+  4   0.20        0.013%         0.013%        16    0/10
+  4   0.15        0.013%         0.013%        16    0/10
+  4   0.10        0.013%         0.013%        16    0/10
+  4   0.05        0.013%         0.013%        16    0/10
+  6   0.20        0.022%         0.022%        54    0/10
+  6   0.15        0.022%         0.022%        49    0/10
+  6   0.10        0.022%         0.022%        40    0/10
+  6   0.05        0.022%         0.022%        32    0/10
+
+============================================================================================
+SIZE SCAN -- R/|c|^2 vs N  (exact where available, else TEBD)
+============================================================================================
+   eps          N=4          N=6          N=8         N=12
+  0.20     0.023077     0.021575     0.021259     0.021660
+  0.15     0.023091     0.021589     0.021271     0.021877
+  0.10     0.023101     0.021599     0.021279     0.022466
+  0.05     0.023107     0.021606     0.021285     0.025467
+
+  Flat across a row  <=>  R ~ epsilon^2 holds at that size too.
+  The trend ALONG a row is the long-range-order question.
+
+  !! 3 runs hit the chi=128 cap, at N in [12].
+     Their truncation error is NOT bounded by the N<=6
+     agreement above. Run --convergence before trusting them.
+
+============================================================================================
+RESIDUALS -- vs the dt^2 floor and vs the slow-mode gap (Trap 2)
+============================================================================================
+  dt^2 Trotter floor = 0.0202 * 0.005^2 = 5.05e-07
+
+  N        gap   mean resid    max resid  max r/floor   max r/gap
+  4     3.0581     2.90e-06     6.88e-06         13.6    2.25e-06
+  6     1.2763     2.79e-06     6.63e-06         13.1    5.19e-06
+  8    ~0.7645     2.58e-06     6.72e-06         13.3    8.79e-06
+ 12    ~0.3398     4.90e-05     4.10e-04        811.9    1.21e-03
+
+  r/gap is the distance to the fixed point in norm. R is QUADRATIC
+  in rho, so a few percent there is a large error in R.
+  At N <= 6 the exact comparison above supersedes all of this.
+
+============================================================================================
+CONTROLS
+============================================================================================
+  h=0    N=  4  R=  0.0000e+00  bond=  1  (dark vacuum: must be ~0)
+  h=0    N=  6  R=  0.0000e+00  bond=  1  (dark vacuum: must be ~0)
+  h=0    N=  8  R=  0.0000e+00  bond=  1  (dark vacuum: must be ~0)
+  h=0    N= 12  R=  0.0000e+00  bond=  1  (dark vacuum: must be ~0)
+  neel   N= 12 sample0  R=  6.1347e-04  vs zero-start   6.1921e-04  ( 0.93%)
+  neel   N= 12 sample4  R=  4.7415e-05  vs zero-start   4.7963e-05  ( 1.14%)
+  neel   N= 12 sample6  R=  3.3254e-04  vs zero-start   3.3324e-04  ( 0.21%)
+
+  Two starts agreeing is consistency, NOT evidence of relaxation
+  (CLAUDE.md Trap 5). The exact comparison is the real certification.
+
+Saved -> C:\Users\Niklas\Documents\Lindbladia_steady_states\Lindbladian_steady_states\experiments\results\ham_finite_size.pkl
+Saved R vs N     -> C:\Users\Niklas\Documents\Lindbladia_steady_states\Lindbladian_steady_states\experiments\results\ham_finite_size_R_vs_N.png
+Saved profiles   -> C:\Users\Niklas\Documents\Lindbladia_steady_states\Lindbladian_steady_states\experiments\results\ham_finite_size_profiles.png

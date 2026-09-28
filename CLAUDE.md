@@ -25,6 +25,9 @@ at rate 1:
     L'  = X_a X_{a+1} (1 − Z_a)(1 − Z_{a+1})     non-Hermitian, dark on |0…0⟩
     L'' = random on the 8-dim commutant of Z⊗Z, ‖L''‖ = ε (currently 0.2)
 
+(A third study replaces L'' with a random Z⊗Z-commuting *Hamiltonian* of norm ε
+— see "Third study: HAMILTONIAN perturbation" below.)
+
 A two-site operator commutes with the *global* P iff it commutes with Z⊗Z on
 its own bond — a purely local condition, which is what makes the random L''
 sampling in `models.random_zz_commuting_operator` legitimate.
@@ -731,6 +734,124 @@ factor).
 χ=32 state can regauge it up to bond dimension ~84 (exact, but the transfer
 operator becomes 7056×7056). Pass `chi_max` if size matters.
 
+## Third study: HAMILTONIAN perturbation of the first model (2026-09-19 →)
+
+Same baseline as the first model (L, L′ at rate 1, |0…0⟩ start, same
+correlator), but the random perturbation is a **Hermitian nearest-neighbour
+Hamiltonian** H = Σ_a h_{a,a+1}, h commuting with Z⊗Z, ‖h‖ = ε, instead of a
+dissipative L″. Separate seed (`HAM_BASE_SEED`), ε ∈ {0.20, 0.15, 0.10, 0.05},
+10 draws. Cache namespaces `haminf_…` (iTEBD) and `hamfin_…` (finite); ε, the
+perturbation type and the schedule live in `run_config`.
+
+h drives |00⟩ ↔ |11⟩ **coherently** with amplitude c = ⟨11|h|00⟩
+(`models.pair_creation_element`). Adiabatic elimination against γ_A = 16 turns
+that into an effective incoherent pair-creation rate ∝ |c|², so R ∝ |c|² ∝ ε²
+is the prediction. The natural quantity is **R/|c|²**.
+
+### Settled: R ∝ ε², exactly, by dense sector solves
+
+(+,+)-sector exact solve, mean R/|c|² over 10 draws (spread ≤ 0.24%):
+
+    N    eps=0.20   0.15      0.10      0.05       gap_rate
+    4    0.023074   0.023088  0.023098  0.023104   3.06  (ε-independent)
+    6    0.021570   0.021585  0.021595  0.021601   1.28  (ε-independent)
+
+Flat in ε at fixed N ⇔ R ∝ ε². No schedule, no truncation, no fit. The open
+question is only the **N-dependence** of R/|c|²: 0.0231 (N=4) → 0.0216 (N=6)
+→ does it plateau (SWSSB survives) or keep falling?
+
+### iTEBD (`imps_ham_eps_grid.py`) — sized, then abandoned as unaffordable
+
+Schedule sized *before* running (Trap 5 lesson) from the exact N=4 correlator:
+q_eff = 8·R_exact(N=4) = 0.18485|c|², time = TARGET_GAP_TIMES/q_eff; the
+preflight confirms q_eff tracks ε² to 0.1%. Do **not** size from
+`exact.sector_steady_state`'s gap — at N=4/6 that is the ε-independent baseline
+diffusive mode.
+
+Why it stopped (measured 2026-09-23): the Hamiltonian flow saturates χ=128
+(dissipative runs sit at bond 32–50), throughput drops to 1.3 steps/s, and with
+the 1/ε² schedule the 40-job grid costs ~6347 CPU-hours (~62 days wall clock
+for ε=0.05 alone). Only the h=0 control (`haminf_control_h0_zero_chi128`) is
+cached. The ε=0.20 staging attempt died at pool startup with
+`OSError: [WinError 87]` in `multiprocessing.spawn` (parent gone mid-spawn) —
+not a physics failure, not investigated further.
+
+### Finite size (`ham_finite_size.py`) — the live study
+
+Cheap for the reason the iTEBD was expensive: at finite N the slowest mode is
+the ε-independent baseline gap, so **one** fixed 55.5-unit schedule serves
+every ε.
+
+**N ≤ 8 at χ=128: clean.** TEBD matches the exact solve on every sample
+(0.013% at N=4, 0.022% at N=6); h=0 controls give R = 0 at every N.
+
+**χ=32 is not enough** even at N=6 (bond at cap, 0.23% off exact). The
+Hamiltonian part is norm-preserving, not contractive, so states stay more
+entangled than in the dissipative study; its χ=32 does not transfer.
+
+**N=12 at χ=128 is truncation-corrupted — do not quote the χ=128 N=12 row**
+(R/|c|² = 0.0217 … 0.0255 across ε, 38% ensemble spread, stage correlators
+jumping 37% on the final stage).
+
+⚠️ **The trap that hid it:** `bond_at_cap` reads the *final* bond dimension —
+40–64 of 128 at ε=0.05 — so the run looked unconstrained. The damage happens in
+the entangled *transient*. Read `max_discarded_weight` over the whole run and
+the last-stage correlators, not the final bond.
+
+**χ sweep** (`--convergence`, probes ε=0.05 s6 and ε=0.20 s9):
+
+| N | probe | χ=192 | χ=256 | χ=320 |
+|---|---|---|---|---|
+| 12 | ε=0.05 s6 | 0.021917 | 0.021027 | — (χ=128: 0.030653) |
+| 12 | ε=0.20 s9 | 0.021266 | 0.021219 | — |
+| 14 | ε=0.05 s6 | 0.021947 | 0.020788 | 0.018161 (drift 5.9%, unrelaxed) |
+| 14 | ε=0.20 s9 | 0.021582 | 0.021328 | 0.021160 |
+| 16 | ε=0.05 s6 | 0.021811 | 0.020915 | 0.020889 |
+| 16 | ε=0.20 s9 | 0.020067 | 0.021100 | 0.020944 |
+
+χ=256 agrees with χ=320 to ≤0.74% at N=16. The N=14 ε=0.05 leg fails to
+certify because its χ=320 *reference* never relaxed, not because χ=256 is short.
+
+**N=12 at χ=256: clean** (`ham_finite_size_highchi_N12_chi256.pkl`):
+
+    eps    mean R/|c|^2   spread   max drift
+    0.20   0.021113       1.47%    0.50%
+    0.15   0.021112       1.49%    0.40%
+    0.10   0.021100       1.36%    0.46%
+    0.05   0.021187       6.66%    2.67%
+    pooled 0.021128 ± 0.000232
+
+So the size series at χ that suffices is 0.02309 (N=4) → 0.02160 (N=6) →
+0.02128 (N=8) → 0.02113 (N=12): the fall is slowing, consistent with a
+nonzero plateau near 0.021.
+
+### ⚠️ N=16 at χ=256 (completed 2026-09-28): NOT relaxed, do not quote
+
+`ham_finite_size_highchi.pkl` (40/40 jobs):
+
+    eps    mean R/|c|^2   spread   max drift   max bond
+    0.20   0.019016       24.43%   7.68%       134/256
+    0.15   0.018580       31.18%   9.05%        88/256
+    0.10   0.018806       55.47%   8.67%        79/256
+    0.05   0.024491       96.03%  15.37%        64/256
+    pooled 0.020223 ± 0.004852
+
+Against N=12's 1.5% spread and <3% drift, this is a transient, not a result.
+No run is at the χ cap and the χ sweep certified 256 at N=16, so the suspect is
+the **schedule** (Trap 5 again), not truncation. The worst-drifting draws sit
+lowest in R (ε=0.05 s4/s5 at drift ~15%), i.e. still climbing from the dark
+start. The two convergence probes (s6, s9) happen to be among the samples that
+*did* relax (drift 0.3–1.3%, matching the grid to 0.1%) — which is why the sweep
+looked clean. The docstring's "55.5 units ≥ 19 relaxation times at N ≤ 12"
+margin estimate from the baseline gap evidently does not carry to N=16.
+
+**Next step:** re-run the worst-drift samples (e.g. ε=0.05 s4, ε=0.10 s4) at
+3× the schedule and check they climb toward ~0.021·|c|². If they do, the whole
+N=16 row needs the longer schedule before it enters the R-vs-N extrapolation.
+
+Cost: one N=16 χ=256 job takes ~410 min with 12 workers loaded, ~234 min with
+4. The full row is ~20 h wall clock on 12 workers.
+
 ## Layout
 
     lindblad_mps/
@@ -803,6 +924,14 @@ operator becomes 7056×7056). Pass `chi_max` if size matters.
                                  in run_config because the cache key cannot
                                  express it, and SUPERSEDES routes a sample to
                                  its longer re-run where one exists.
+      imps_ham_eps_grid.py       **Hamiltonian perturbation, iTEBD** — sizing
+                                 (--preflight) and grid. Also provides the
+                                 draws/sizing the finite script imports. The
+                                 grid itself is unaffordable (see third study)
+      ham_finite_size.py         **Hamiltonian perturbation, finite N** — exact
+                                 N ∈ {4,6}, TEBD N ∈ {4,6,8,12}; --convergence
+                                 (χ sweep at CONV_NS) and --highchi (full
+                                 ensemble at HIGHCHI_N, HIGHCHI_CHI)
       results/                   pickles + PNGs, and _cache/ (see below)
 
 Figures worth knowing — finite: `renyi2_swssb_size_scaling[_neel].png` (R vs N,
@@ -837,6 +966,18 @@ separately-computed |zero⟩ runs to five digits.
     uv run pytest                                     # 133 tests, ~5 s
     uv run python experiments/renyi2_swssb_chi128.py  # ~2.7 h per initial state
     uv run python experiments/imps_drift_eps_grids.py  # ~3.9 h, 46 jobs
+    uv run python experiments/ham_finite_size.py       # ~2 h, 167 jobs, χ=128
+    uv run python experiments/ham_finite_size.py --convergence
+    uv run python experiments/ham_finite_size.py --highchi   # ~20 h at N=16
+
+⚠️ `--highchi` always saves to `ham_finite_size_highchi.pkl`, whatever
+HIGHCHI_N is — rename the previous row's pickle first (the N=12 one is now
+`ham_finite_size_highchi_N12_chi256.pkl`). The per-job cache is unaffected.
+
+⚠️ When redirecting output to a log on Windows, set `PYTHONIOENCODING=utf-8`
+(or run with `-X utf8`). The reports print ⚠️, and the cp1252 console encoding
+raised `UnicodeEncodeError` at the end of the N ∈ {14,16} `--convergence` run,
+after all the jobs had finished.
 
 Experiments parallelise across `N_WORKERS` processes. **Every completed run is
 pickled into `experiments/results/_cache/`** keyed by `kind_label_init_N_chi`,

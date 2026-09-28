@@ -21,6 +21,13 @@ Baseline jump operators (applied uniformly to every bond):
 both commute with Z (x) Z. A random perturbation L'' is drawn from the
 8-dim parity-commuting space and rescaled to a fixed operator norm epsilon.
 
+The same commutant supplies the HAMILTONIAN perturbation ensemble: its
+Hermitian part is 8 real dimensions (real coefficients on those eight Pauli
+strings), sampled by `random_zz_commuting_hermitian_operator` and applied as
+H = sum_a h_{a,a+1}. Where L'' creates pairs incoherently at rate
+|<11|L''|00>|^2, h drives |00> <-> |11> coherently at amplitude <11|h|00> --
+see `pair_creation_element`.
+
 A second baseline, `classical_drift_annihilation_jump_operators`, is the
 Lindblad form of a purely classical biased-hopping + pair-annihilation circuit
 (see its docstring). It shares everything the SWSSB study relies on -- strong
@@ -236,6 +243,81 @@ def random_zz_commuting_operator(
         norm = operator_norm(M)
         if norm > 1e-9:  # essentially never fails; guard the degenerate draw
             return M * (epsilon / norm)
+
+
+def random_zz_commuting_hermitian_operator(
+    epsilon: float, rng: np.random.Generator, traceless: bool = True
+) -> np.ndarray:
+    """Sample a random parity-commuting HERMITIAN bond operator of norm epsilon.
+
+    The Hamiltonian analogue of random_zz_commuting_operator(): draws a complex
+    Ginibre 4x4, Hermitizes it, projects onto the 8-dim commutant of Z (x) Z,
+    optionally removes the identity component, and rescales so its operator
+    norm equals epsilon. Used as a nearest-neighbour Hamiltonian perturbation
+    H = sum_a h_{a,a+1}, which commutes with the global parity P = Z_1...Z_N by
+    the local criterion in the module docstring.
+
+    Hermitizing and projecting commute: project_to_zz_commutant multiplies by a
+    real symmetric 0/1 mask, so (M * mask)^dagger = M^dagger * mask. The result
+    is a real linear combination of the eight Pauli strings {I,Z} (x) {I,Z} and
+    {X,Y} (x) {X,Y} -- the 8-real-dimensional Hermitian part of the commutant.
+
+    Why traceless by default -- this differs from the L'' convention on purpose
+    --------------------------------------------------------------------------
+    For a HAMILTONIAN the identity component is exactly inert: it commutes with
+    everything, so it cancels in -i[H, rho] and changes no dynamics at all. It
+    does contribute to the operator norm, though, so leaving it in makes epsilon
+    a fictitious measure of perturbation strength -- a draw with a large
+    I (x) I coefficient gets rescaled down and acts weaker than its epsilon
+    claims, which is pure scatter in the ensemble.
+
+    For a JUMP operator the identity part is also inert on its own (L = c I
+    gives |c|^2 rho - |c|^2 rho = 0), but its CROSS terms with the rest of L''
+    in L'' rho L''^dagger are not, so it is physically meaningful there and
+    random_zz_commuting_operator keeps it.
+
+    Either way the pair-creation matrix element <11|h|00> is untouched by the
+    trace removal, since I (x) I contributes only to the diagonal.
+
+    Input:
+        epsilon: target operator norm (= max |eigenvalue|, h being Hermitian).
+        rng: a numpy Generator (pass a seeded one for reproducibility).
+        traceless: remove the I (x) I component before rescaling (see above).
+    Output: (4, 4) complex Hermitian ndarray with operator_norm(.) == epsilon.
+    """
+    while True:
+        M = rng.standard_normal((4, 4)) + 1j * rng.standard_normal((4, 4))
+        M = (M + M.conj().T) / 2.0
+        M = project_to_zz_commutant(M)
+        if traceless:
+            M = M - (np.trace(M) / 4.0) * np.eye(4, dtype=complex)
+        norm = operator_norm(M)
+        if norm > 1e-9:  # essentially never fails; guard the degenerate draw
+            return M * (epsilon / norm)
+
+
+def pair_creation_element(M: np.ndarray) -> complex:
+    """<11|M|00>, the amplitude with which a bond operator creates a pair.
+
+    This single matrix element is what destabilizes the dark vacuum |0...0>,
+    and it sets both the correlator and the Liouvillian gap in every model
+    studied here (CLAUDE.md: R = q/4 in the thermodynamic limit, with
+    q = |<11|L''|00>|^2 for a dissipative perturbation).
+
+    Basis index = 2*(left bit) + (right bit), so <11|M|00> = M[3, 0]. For a
+    Hermitian h in the commutant, expanded in Pauli strings with real
+    coefficients a_.,
+
+        <11|h|00> = a_XX - a_YY + i (a_XY + a_YX)
+
+    since the {I,Z} (x) {I,Z} strings are diagonal and cannot contribute. That
+    is what makes a Hamiltonian perturbation a COHERENT pair drive of amplitude
+    |c|, rather than an incoherent one of rate q.
+
+    Input: M, a (4, 4) two-site operator.
+    Output: complex, the |00> -> |11> matrix element.
+    """
+    return complex(M[0b11, 0b00])
 
 
 def pauli_string_decomposition(M: np.ndarray, tol: float = 1e-9) -> dict[str, complex]:

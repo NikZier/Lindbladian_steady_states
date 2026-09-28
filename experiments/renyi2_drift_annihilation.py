@@ -125,42 +125,21 @@ def creation_amplitude(L_pp: np.ndarray) -> float:
 def sector_steady_state(
     L2_terms: list[tuple[np.ndarray, float]], N: int, charge: int = +1
 ) -> tuple[np.ndarray, float]:
-    """Exact steady state inside one strong-symmetry sector, by dense null space.
+    """Exact steady state inside one strong-symmetry sector (thin wrapper).
 
-    exact.steady_state cannot be used here: the strong Z_2 symmetry makes the
-    zero eigenvalue of the full Liouvillian degenerate (one steady state per
-    sector), and it refuses on exactly that condition. Restricting to the
-    (charge, charge) block -- vec indices |a><b| with both parities equal to
-    `charge` -- makes the null vector unique again, and it is the sector the
-    TEBD runs actually live in.
+    The implementation now lives in lindblad_mps.exact.sector_steady_state,
+    which additionally accepts Hamiltonian terms (needed by the Hamiltonian-
+    perturbation study, experiments/imps_ham_eps_grid.py) and reports the
+    relaxation rate as well as the singular-value gap. This wrapper keeps the
+    (rho, gap) 2-tuple every caller in this script expects, with `gap` the same
+    smallest-nonzero-singular-value it has always been.
 
-    Input:
-        L2_terms: bond jump terms (op, rate), as passed to tebd.
-        N: number of sites (dense: keep to N <= 6).
-        charge: the parity eigenvalue of the sector (+1 for both starts here).
-    Output: (rho, gap) -- the normalized sector steady state, and the smallest
-        nonzero singular value of the restricted generator (a nonzero gap is
-        what makes the state unique).
+    Input: L2_terms, bond jump terms (op, rate); N, sites (dense: N <= 6);
+        charge, the sector's parity eigenvalue.
+    Output: (rho, gap_singular), as before.
     """
-    dim = 2**N
-    jump_ops = exact.build_jump_operators([(op, 1.0) for op, _ in L2_terms], [], N)
-    gen = vectorize.liouvillian_generator([], jump_ops, d=dim)
-
-    bits = np.array([[(k >> b) & 1 for b in range(N)] for k in range(dim)])
-    keep = np.flatnonzero(np.where(bits.sum(axis=1) % 2, -1, 1) == charge)
-    idx = (keep[:, None] * dim + keep[None, :]).reshape(-1)  # vec(|a><b|) = dim*a+b
-
-    # A strong symmetry means the generator does not connect sectors at all.
-    # Assert it rather than assume it: it is the premise of the whole study.
-    outside = np.setdiff1d(np.arange(dim * dim), idx)
-    assert np.abs(gen[np.ix_(outside, idx)]).max() < 1e-12, "sector leakage"
-
-    _, S, Vh = np.linalg.svd(gen[np.ix_(idx, idx)])
-    v = np.zeros(dim * dim, dtype=complex)
-    v[idx] = Vh[-1].conj()
-    rho = vectorize.unvec(v, dim)
-    rho = (rho + rho.conj().T) / 2
-    return rho / np.trace(rho), float(S[-2])
+    out = exact.sector_steady_state([], [], L2_terms, [], N, charge=charge)
+    return out["rho"], out["gap_singular"]
 
 
 def exact_reference(samples: list[dict], N: int = 4) -> dict:

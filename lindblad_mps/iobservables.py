@@ -191,3 +191,103 @@ def correlation_length(
 
     xi = -2.0 / np.log(ratio)
     return {"xi": float(xi), "eta1": eta1, "eta2": eta2, "reason": None}
+
+
+# ---------------------------------------------------------------------------
+# True n-site reduced density matrix of the infinite chain
+# ---------------------------------------------------------------------------
+# Tiling an iMPS into a finite open-boundary MPS and tracing that is NOT the
+# reduced density matrix of the infinite chain -- it cuts the state at the
+# window edge instead of tracing the tails out, and the error grows with window
+# size (the original version of imps_positivity_hermiticity.py did this and
+# reported purity 1.87-3.01 for states that were fine). The correct object
+# closes the window against the leading left/right eigenvectors of the
+# unit-cell trace map, which ARE the partial trace of the two infinite tails:
+#
+#     rho_window[s_1..s_n] = v_L^T Theta_{s_1} ... Theta_{s_n} v_R
+#
+
+VEC_I = np.array([1.0, 0.0, 0.0, 1.0], dtype=complex)  # vec(I_2), row-major
+
+
+def a_form(state: "imps.iMPS") -> dict:
+    """Left-weighted (A-form) unit-cell tensors: A_A = Lambda_B Gamma_A, etc.
+
+    Input: state, a canonicalize()'d iMPS.
+    Output: dict {'A': theta_A, 'B': theta_B}, each (chi_l, local_dim**2, chi_r).
+    """
+    return {"A": imps.left_weighted(state.Gamma["A"], state.Lambda["B"]),
+            "B": imps.left_weighted(state.Gamma["B"], state.Lambda["A"])}
+
+
+def trace_map(theta: np.ndarray) -> np.ndarray:
+    """M[l,r] = sum_s theta[l,s,r] vec(I)[s] -- one site's contribution to Tr[rho]."""
+    return np.tensordot(theta, VEC_I, axes=([1], [0]))
+
+
+def environments(Theta: dict) -> tuple[np.ndarray, np.ndarray]:
+    """Leading left/right eigenvectors of the unit-cell trace map M_A M_B.
+
+    These are the partial trace of the infinite tails to either side of the
+    window. Solved densely: M is chi x chi with chi <= ~30 here.
+    """
+    M = trace_map(Theta["A"]) @ trace_map(Theta["B"])
+    wr, vr = np.linalg.eig(M)
+    wl, vl = np.linalg.eig(M.T)
+    v_R = vr[:, np.argmax(np.abs(wr))]
+    v_L = vl[:, np.argmax(np.abs(wl))]
+    return v_L, v_R
+
+
+def reduced_density_matrix(state: "imps.iMPS", n_sites: int) -> np.ndarray:
+    """True n-site reduced density matrix of the infinite chain, trace-normalized.
+
+    Input: a canonicalize()'d iMPS over vec(rho); n_sites (even).
+    Output: (2**n_sites, 2**n_sites) complex array with unit trace.
+    """
+    Theta = a_form(state)
+    v_L, v_R = environments(Theta)
+
+    # Contract the window, carrying the physical (vectorized) legs.
+    block = v_L.reshape(1, -1)                       # (phys_so_far=1, chi)
+    for k in range(n_sites):
+        th = Theta["A" if k % 2 == 0 else "B"]       # (chi_l, 4, chi_r)
+        block = np.tensordot(block, th, axes=([-1], [0]))   # (..., 4, chi_r)
+        block = block.reshape(-1, block.shape[-1])
+    rho = (block @ v_R).reshape((2, 2) * n_sites)    # (ket_1,bra_1, ket_2,bra_2, ...)
+
+    # (ket_1,bra_1,...) -> (ket_1..ket_n, bra_1..bra_n)
+    perm = list(range(0, 2 * n_sites, 2)) + list(range(1, 2 * n_sites, 2))
+    rho = np.transpose(rho, perm).reshape(2 ** n_sites, 2 ** n_sites)
+
+    tr = np.trace(rho)
+    if abs(tr) > 1e-300:
+        rho = rho / tr
+    return rho
+
+
+def rdm_diagnostics(rho: np.ndarray) -> dict:
+    """Hermiticity and positivity of a trace-normalized rho.
+
+    R >= 0 is guaranteed only for a physical rho, and nothing in the vectorized
+    iTEBD constrains the converged state to be one (CLAUDE.md, Trap 3: three of
+    ten samples in the first study converged to purity > 1). These are the
+    numbers that detect it.
+
+    Input: rho, a trace-normalized (d, d) array (e.g. from
+        reduced_density_matrix()).
+    Output: dict with 'hermiticity_error' (relative), 'min_eig', 'max_eig',
+        'negative_weight' (fraction of |eigenvalue| mass that is negative),
+        'eigenvalues' and 'purity'.
+    """
+    herm = np.linalg.norm(rho - rho.conj().T) / max(np.linalg.norm(rho), 1e-300)
+    w = np.linalg.eigvalsh(0.5 * (rho + rho.conj().T))
+    neg = w[w < 0].sum()
+    return {
+        "hermiticity_error": float(herm),
+        "min_eig": float(w.min()),
+        "max_eig": float(w.max()),
+        "negative_weight": float(abs(neg) / np.abs(w).sum()),
+        "eigenvalues": w,
+        "purity": float(np.trace(rho.conj().T @ rho).real),
+    }

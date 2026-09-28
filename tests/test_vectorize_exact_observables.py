@@ -7,6 +7,7 @@ maximally-mixed steady state for pure dephasing).
 """
 
 import numpy as np
+import scipy.linalg
 import pytest
 
 from lindblad_mps import exact, observables, vectorize
@@ -226,3 +227,72 @@ class TestLocalVecRoundTrip:
             vectorize.physical_to_local_vec(A, N), vectorize.physical_to_local_vec(B, N)
         )
         assert np.isclose(global_ip, local_ip)
+
+
+class TestHamiltonianBranchOfTheBondGate:
+    """bond_gate's Hamiltonian branch, which every H-perturbation run depends on.
+
+    Every production call in this repo passed H2_terms=[] until the Hamiltonian
+    perturbation study (experiments/imps_ham_eps_grid.py), so the H branch --
+    the -i(H (x) I - I (x) H^T) term in liouvillian_generator, plus the
+    local-vec reordering applied on top of it -- carried no direct coverage of
+    its own. A sign or transpose error there would not crash; it would quietly
+    evolve under the wrong Hamiltonian.
+    """
+
+    def test_h_only_gate_is_exactly_unitary_conjugation(self):
+        # With no dissipation the bond gate must be rho -> U rho U^dagger with
+        # U = exp(-i dt h), exactly. This is the whole H-specific surface.
+        from lindblad_mps import models
+
+        rng = np.random.default_rng(11)
+        h = models.random_zz_commuting_hermitian_operator(0.7, rng)
+        dt = 0.13
+
+        gate = vectorize.bond_gate([(h, 1.0)], [], dt)
+        rho = rng.standard_normal((4, 4)) + 1j * rng.standard_normal((4, 4))
+        rho = rho + rho.conj().T
+
+        got = vectorize.local_vec_to_physical(gate @ vectorize.physical_to_local_vec(rho, 2), 2)
+        U = scipy.linalg.expm(-1j * dt * h)
+        assert np.allclose(got, U @ rho @ U.conj().T, atol=1e-12)
+
+    def test_combined_h_and_dissipator_gate_matches_the_dense_reference(self):
+        # H and L terms are exponentiated together, so check the SUM against
+        # the independently-built dense two-site generator from exact.py.
+        from lindblad_mps import models
+
+        rng = np.random.default_rng(12)
+        h = models.random_zz_commuting_hermitian_operator(0.4, rng)
+        L, L_prime = models.baseline_jump_operators()
+        L2_terms = [(L, 1.0), (L_prime, 0.6)]
+        dt = 0.07
+
+        gate = vectorize.bond_gate([(h, 1.0)], L2_terms, dt, weight_left=1.0, weight_right=1.0)
+
+        dense_gen = vectorize.liouvillian_generator(
+            [(exact.build_hamiltonian([(h, 1.0)], [], 2), 1.0)],
+            exact.build_jump_operators(L2_terms, [], 2),
+            d=4,
+        )
+        rho = rng.standard_normal((4, 4)) + 1j * rng.standard_normal((4, 4))
+        rho = rho + rho.conj().T
+
+        got = vectorize.local_vec_to_physical(gate @ vectorize.physical_to_local_vec(rho, 2), 2)
+        expected = vectorize.unvec(scipy.linalg.expm(dt * dense_gen) @ vectorize.vec(rho), 4)
+        assert np.allclose(got, expected, atol=1e-12)
+
+    def test_h_only_evolution_preserves_trace_and_hermiticity(self):
+        from lindblad_mps import models
+
+        rng = np.random.default_rng(13)
+        h = models.random_zz_commuting_hermitian_operator(0.9, rng)
+        gate = vectorize.bond_gate([(h, 1.0)], [], 0.3)
+
+        rho = rng.standard_normal((4, 4)) + 1j * rng.standard_normal((4, 4))
+        rho = rho + rho.conj().T
+        rho = rho / np.trace(rho)
+
+        out = vectorize.local_vec_to_physical(gate @ vectorize.physical_to_local_vec(rho, 2), 2)
+        assert np.trace(out) == pytest.approx(1.0)
+        assert np.allclose(out, out.conj().T, atol=1e-12)
