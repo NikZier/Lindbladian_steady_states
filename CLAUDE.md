@@ -634,6 +634,53 @@ discriminator: it already reports the *right* answer (R/q = 0.1256 vs the
 analytic 1/8), which an unrelaxed grid would not. Worth one long-schedule run at
 N=12 to confirm rather than assume.
 
+### ⚠️ EXACT finite N (2026-10-12): the N ≤ 12 grid was RELAXED — the fall is open-chain physics
+
+`experiments/drift_circuit_exact_finite.py`, `lindblad_mps/sector_solver.py`.
+Exact (+,+)-sector steady states, matrix-free GMRES on ρ restricted to the
+2^(N−1) even states, preconditioned by the classical baseline (populations:
+exact dense LU of the bordered master equation; coherences: damping only —
+an approximation, since classical jumps also carry coherences between
+configurations differing off the bond; the residual is always checked with
+the full generator). No χ, no schedule, no initial state. N ∈ {4,6,8,10,12} × 10
+samples × ε ∈ {0.2,0.15,0.1,0.05} at p=0.8, plus p=1/2 at ε=0.2 and L''=0
+controls: 260 solves, ~1 h on 6 workers (N=12: ~28 GMRES iterations, ~5 min).
+Residual ≤ 1.2e-11 everywhere, λ_min ≥ 0, matches the dense solve to 7e-12
+(tests/test_sector_solver.py). Controls: pure vacuum, R = 0.
+
+**Exact / cached 55.5-unit TEBD = 1.0000–1.0002 at N = 4, 8, 12, all ten
+samples.** So the "every N ≥ 8 number measures a transient" in "What is open
+now" above is **wrong for N ≤ 12** (N = 16, 20 untested). The 12/q relaxation
+time is an *infinite-chain* statement; on an open drifting chain pairs are
+swept to the wall in ~N/v and the finite chain relaxes fast. The infinite
+result (flat R = 4q/γ_A) stands — it is a different object.
+
+R(N/4, 3N/4)/q, mean over samples (ε→0 spread 3.7% at N=12):
+
+    N           4      6      8      10     12
+    p=0.8 ε=.20 2.362  0.868  0.839  0.526  0.513
+    p=0.8 ε=.05 2.343  0.806  0.740  0.437  0.396
+    p=0.5 ε=.20 2.027  2.051  2.092  2.117  2.156    (flat: finite law 2q/γ_A)
+
+R ∝ q holds at every N (the ε=0.05 column is the ε→0 law), but at p = 0.8
+the prefactor is N- and position-dependent. Full R(i,j) at N=12 (ε=0.05):
+density rises from 1.7q at site 0 to 13q at the right wall; R(i,i+1) grows
+left→right; R(0,N−1)/q = 0.55, 0.264, 0.129, 0.065 for N = 6…12 — **halves per
+2 sites**. At p = 1/2 every R(i,j)/q at N=12 lies in 2.03–2.10.
+
+Mechanism (heuristic, consistent with the numbers, not derived): a pair's
+relative coordinate is unbiased (separation grows at rate p+(1−p)=1, shrinks at
+1), only the centre of mass drifts at v = 2p−1. A pair seen at midpoint X was
+born upstream, so has lived ≲ X/v and its separation is cut off at
+r ~ √(X/v). The inflow (left) edge thus kills long separations:
+R(0,N−1) ~ exp(−v r²/4X) = exp(−0.3(N−1)) predicts ×0.55 per 2 sites (seen
+×0.48–0.50). In the infinite chain there is no upstream edge and order returns.
+**Consequence: at fixed fractions (N/4, 3N/4) the open driven chain shows no
+size-independent plateau at N ≤ 12** — do not compare it with the iTEBD plateau
+as if they measured the same thing; the bias, irrelevant in the bulk, is
+decisive with open boundaries. Néel is in the (−,−) sector at N = 6, 10; not
+computed.
+
 ## The infinite system (iTEBD) — FIRST model
 
 ⚠️ Everything in this section is the **first** model (`baseline_jump_operators`,
@@ -873,6 +920,8 @@ Cost: one N=16 χ=256 job takes ~410 min with 12 workers loaded, ~234 min with
                       (L†L) steady-state search here is conditioning, not
                       locality: gap(L†L) ~ gap(L)² ~ 4e-6 for sample 8.
       blas.py         BLAS thread control — see below.
+      sector_solver.py exact (+,+)-sector steady state to N=12, matrix-free
+                      GMRES with a classical-baseline preconditioner.
       imps.py         infinite MPS (2-site unit cell, Vidal Γ-Λ form),
                       Orús-Vidal canonicalization via transfer-matrix fixed
                       points. Read its module docstring before touching
@@ -932,6 +981,8 @@ Cost: one N=16 χ=256 job takes ~410 min with 12 workers loaded, ~234 min with
                                  N ∈ {4,6}, TEBD N ∈ {4,6,8,12}; --convergence
                                  (χ sweep at CONV_NS) and --highchi (full
                                  ensemble at HIGHCHI_N, HIGHCHI_CHI)
+      drift_circuit_exact_finite.py  **second model, EXACT finite N** 4..12,
+                                 4 epsilons + p=1/2 (~1 h)
       results/                   pickles + PNGs, and _cache/ (see below)
 
 Figures worth knowing — finite: `renyi2_swssb_size_scaling[_neel].png` (R vs N,
