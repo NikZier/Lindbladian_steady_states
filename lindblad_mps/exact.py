@@ -13,11 +13,35 @@ import scipy.linalg as sla
 from . import vectorize
 
 
+def embed_wrap_bond_operator(op: np.ndarray, N: int, local_dim: int = 2) -> np.ndarray:
+    """Embed a two-site operator on the ring's wrap bond (left = N-1, right = 0).
+
+    Built by placing op on sites (0, 1) and permuting tensor axes, independently
+    of the bit arithmetic in sector_solver, so the two can check each other.
+
+    Input: op, (local_dim^2, local_dim^2); N >= 3; local_dim.
+    Output: (local_dim^N, local_dim^N) dense operator.
+    """
+    d = local_dim
+    T = np.kron(op, np.eye(d ** (N - 2))).reshape((d,) * (2 * N))
+    # axes of T: [left, right, sites 1..N-2]; physical order is [right, 1..N-2, left]
+    perm = [1] + list(range(2, N)) + [0]
+    return T.transpose(perm + [N + x for x in perm]).reshape(d**N, d**N)
+
+
+def _bond_embeddings(op, N, local_dim, periodic):
+    out = [vectorize.embed_bond_operator(op, i, N, local_dim) for i in range(N - 1)]
+    if periodic:
+        out.append(embed_wrap_bond_operator(op, N, local_dim))
+    return out
+
+
 def build_hamiltonian(
     H2_terms: list[tuple[np.ndarray, float]],
     H1_terms: list[tuple[np.ndarray, float]],
     N: int,
     local_dim: int = 2,
+    periodic: bool = False,
 ) -> np.ndarray:
     """Build the dense total Hamiltonian for an N-site chain.
 
@@ -31,14 +55,15 @@ def build_hamiltonian(
             applied uniformly to every site.
         N: number of sites.
         local_dim: physical dimension of one site.
+        periodic: also apply each two-site term on the wrap bond (N-1, 0).
     Output:
         (local_dim^N, local_dim^N) dense Hamiltonian.
     """
     dim = local_dim**N
     H = np.zeros((dim, dim), dtype=complex)
     for op, c in H2_terms:
-        for i in range(N - 1):
-            H += c * vectorize.embed_bond_operator(op, i, N, local_dim)
+        for full in _bond_embeddings(op, N, local_dim, periodic):
+            H += c * full
     for op, c in H1_terms:
         for i in range(N):
             H += c * vectorize.embed_site_operator(op, i, N, local_dim)
@@ -50,6 +75,7 @@ def build_jump_operators(
     L1_terms: list[tuple[np.ndarray, float]],
     N: int,
     local_dim: int = 2,
+    periodic: bool = False,
 ) -> list[tuple[np.ndarray, float]]:
     """Build the dense list of (jump_operator, rate) pairs for an N-site chain.
 
@@ -61,8 +87,8 @@ def build_jump_operators(
     """
     jump_ops = []
     for op, gamma in L2_terms:
-        for i in range(N - 1):
-            jump_ops.append((vectorize.embed_bond_operator(op, i, N, local_dim), gamma))
+        for full in _bond_embeddings(op, N, local_dim, periodic):
+            jump_ops.append((full, gamma))
     for op, gamma in L1_terms:
         for i in range(N):
             jump_ops.append((vectorize.embed_site_operator(op, i, N, local_dim), gamma))
@@ -150,6 +176,7 @@ def sector_steady_state(
     charge: int = 1,
     local_dim: int = 2,
     leakage_tol: float = 1e-12,
+    periodic: bool = False,
 ) -> dict:
     """Exact steady state inside one strong-symmetry sector, by dense null space.
 
@@ -193,6 +220,7 @@ def sector_steady_state(
         charge: the sector's parity eigenvalue (+1 for both starts used here).
         local_dim: physical dimension of one site.
         leakage_tol: tolerance on the strong-symmetry block structure.
+        periodic: ring (adds the wrap bond (N-1, 0)) instead of open chain.
     Output: dict with
         'rho' -- the normalized (local_dim^N, local_dim^N) sector steady state,
         'gap_rate', 'gap_singular' -- see above,
@@ -201,8 +229,8 @@ def sector_steady_state(
         'indices' -- the sector's vec indices.
     """
     dim = local_dim**N
-    H = build_hamiltonian(H2_terms, H1_terms, N, local_dim)
-    jump_ops = build_jump_operators(L2_terms, L1_terms, N, local_dim)
+    H = build_hamiltonian(H2_terms, H1_terms, N, local_dim, periodic)
+    jump_ops = build_jump_operators(L2_terms, L1_terms, N, local_dim, periodic)
     generator = vectorize.liouvillian_generator([(H, 1.0)], jump_ops, d=dim)
 
     idx = sector_indices(N, charge, local_dim)

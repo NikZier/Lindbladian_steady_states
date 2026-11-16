@@ -79,12 +79,12 @@ class iMPS:
                 explicitly lets this class -- and hence canonicalize(),
                 transfer_step() and build_transfer_operator(), which all read
                 only phys_dim and never local_dim -- be reused for a tensor
-                network whose site index is NOT a vectorized 2x2 block. In
-                particular ilpdo.iLPDO's X-tensors carry a combined
-                (physical, Kraus) index of dimension local_dim*kappa, which
-                is generally not a perfect square; reusing this machinery
-                avoids duplicating the gauge-fixing, which took three
-                separate bug fixes to get right.
+                network whose site index is NOT a vectorized 2x2 block (e.g.
+                a locally purified ansatz with a combined (physical, Kraus)
+                index of dimension local_dim*kappa, which is generally not a
+                perfect square); reusing this machinery avoids duplicating
+                the gauge-fixing, which took three separate bug fixes to get
+                right.
         """
         self.Gamma = {"A": Gamma_A, "B": Gamma_B}
         self.Lambda = {

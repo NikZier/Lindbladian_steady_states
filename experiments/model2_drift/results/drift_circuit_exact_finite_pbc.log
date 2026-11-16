@@ -1,0 +1,346 @@
+Validating the sector solver against the dense exact solve ...
+  worst |rho - rho_dense| = 5.36e-12, worst rel. error in R = 9.46e-11 (20 cases, N = 4, 6)
+
+260 exact solves: N < 14 on 6 workers, N >= 14 one at a time
+  [  1/260] p=0.8 eps=0.20  sample4 N=12 R=1.091485e-02 res=6.4e-12 it= 24 lmin=+1.4e-14 [301s, 5.1 min]
+  [  2/260] p=0.8 eps=0.20  sample0 N=12 R=1.173111e-02 res=6.6e-12 it= 24 lmin=+2.1e-14 [304s, 5.1 min]
+  [  3/260] p=0.8 eps=0.20  sample2 N=12 R=1.169820e-02 res=2.1e-12 it= 25 lmin=+2.1e-14 [309s, 5.2 min]
+  [  4/260] p=0.8 eps=0.20  sample1 N=12 R=2.285534e-02 res=8.5e-12 it= 26 lmin=+6.0e-13 [325s, 5.5 min]
+  [  5/260] p=0.8 eps=0.20  sample3 N=12 R=1.673237e-02 res=1.9e-12 it= 26 lmin=+1.4e-13 [325s, 5.5 min]
+  [  6/260] p=0.8 eps=0.20  sample5 N=12 R=3.191986e-02 res=6.0e-12 it= 26 lmin=+3.7e-12 [330s, 5.5 min]
+  [  7/260] p=0.8 eps=0.20  sample8 N=12 R=3.593442e-03 res=8.6e-13 it= 24 lmin=+2.5e-17 [290s, 10.0 min]
+  [  8/260] p=0.8 eps=0.20  sample6 N=12 R=5.301380e-02 res=8.3e-12 it= 25 lmin=+4.2e-11 [303s, 10.1 min]
+  [  9/260] p=0.8 eps=0.15  sample0 N=12 R=6.512358e-03 res=1.4e-12 it= 24 lmin=+8.0e-16 [288s, 10.3 min]
+  [ 10/260] p=0.8 eps=0.20  sample7 N=12 R=8.403004e-03 res=1.5e-12 it= 26 lmin=+3.1e-15 [312s, 10.3 min]
+  [ 11/260] p=0.8 eps=0.20  sample9 N=12 R=3.122522e-02 res=1.0e-11 it= 26 lmin=+3.3e-12 [319s, 10.8 min]
+  [ 12/260] p=0.8 eps=0.15  sample1 N=12 R=1.237277e-02 res=2.0e-12 it= 26 lmin=+2.6e-14 [314s, 10.8 min]
+  [ 13/260] p=0.8 eps=0.15  sample3 N=12 R=9.204764e-03 res=4.7e-12 it= 23 lmin=+5.5e-15 [277s, 14.7 min]
+  [ 14/260] p=0.8 eps=0.15  sample2 N=12 R=6.470977e-03 res=1.0e-12 it= 24 lmin=+7.8e-16 [285s, 14.8 min]
+  [ 15/260] p=0.8 eps=0.15  sample4 N=12 R=6.026737e-03 res=1.9e-12 it= 24 lmin=+5.1e-16 [286s, 15.0 min]
+  [ 16/260] p=0.8 eps=0.15  sample5 N=12 R=1.713578e-02 res=5.6e-12 it= 25 lmin=+1.6e-13 [296s, 15.2 min]
+  [ 17/260] p=0.8 eps=0.15  sample7 N=12 R=4.622179e-03 res=4.9e-12 it= 23 lmin=+1.1e-16 [276s, 15.4 min]
+  [ 18/260] p=0.8 eps=0.15  sample6 N=12 R=2.779995e-02 res=6.6e-12 it= 24 lmin=+1.9e-12 [285s, 15.5 min]
+  [ 19/260] p=0.8 eps=0.15  sample8 N=12 R=2.010825e-03 res=4.3e-12 it= 21 lmin=+8.8e-19 [253s, 18.9 min]
+  [ 20/260] p=0.8 eps=0.10  sample0 N=12 R=2.864955e-03 res=4.0e-12 it= 21 lmin=+7.2e-18 [253s, 19.3 min]
+  [ 21/260] p=0.8 eps=0.10  sample2 N=12 R=2.839700e-03 res=1.3e-12 it= 22 lmin=+6.9e-18 [262s, 19.8 min]
+  [ 22/260] p=0.8 eps=0.10  sample3 N=12 R=4.020603e-03 res=6.7e-12 it= 21 lmin=+5.1e-17 [254s, 19.8 min]
+  [ 23/260] p=0.8 eps=0.10  sample1 N=12 R=5.334760e-03 res=3.3e-12 it= 23 lmin=+2.5e-16 [275s, 19.8 min]
+  [ 24/260] p=0.8 eps=0.15  sample9 N=12 R=1.677685e-02 res=2.6e-12 it= 26 lmin=+1.4e-13 [305s, 19.8 min]
+  [ 25/260] p=0.8 eps=0.10  sample4 N=12 R=2.641526e-03 res=2.1e-12 it= 22 lmin=+4.5e-18 [262s, 23.3 min]
+  [ 26/260] p=0.8 eps=0.10  sample5 N=12 R=7.338888e-03 res=4.0e-12 it= 23 lmin=+1.6e-15 [272s, 23.8 min]
+  [ 27/260] p=0.8 eps=0.10  sample8 N=12 R=8.900495e-04 res=1.1e-12 it= 20 lmin=+7.0e-21 [245s, 23.9 min]
+  [ 28/260] p=0.8 eps=0.10  sample6 N=12 R=1.165717e-02 res=7.6e-12 it= 21 lmin=+2.1e-14 [251s, 23.9 min]
+  [ 29/260] p=0.8 eps=0.10  sample7 N=12 R=2.020852e-03 res=2.7e-12 it= 22 lmin=+9.2e-19 [3547s, 78.9 min]
+  [ 30/260] p=0.8 eps=0.10  sample9 N=12 R=7.188916e-03 res=5.3e-12 it= 23 lmin=+1.4e-15 [3568s, 79.3 min]
+  [ 31/260] p=0.8 eps=0.05  sample0 N=12 R=7.116222e-04 res=1.2e-12 it= 19 lmin=+1.9e-21 [3514s, 81.9 min]
+  [ 32/260] p=0.8 eps=0.05  sample2 N=12 R=7.043179e-04 res=2.8e-12 it= 18 lmin=+1.8e-21 [3502s, 82.3 min]
+  [ 33/260] p=0.8 eps=0.05  sample3 N=12 R=9.941224e-04 res=2.4e-12 it= 19 lmin=+1.5e-20 [3509s, 82.4 min]
+  [ 34/260] p=0.8 eps=0.05  sample1 N=12 R=1.308048e-03 res=1.6e-12 it= 20 lmin=+7.2e-20 [3520s, 82.5 min]
+  [ 35/260] p=0.8 eps=0.05  sample4 N=12 R=6.547087e-04 res=1.2e-12 it= 19 lmin=+1.3e-21 [222s, 82.6 min]
+  [ 36/260] p=0.8 eps=0.05  sample5 N=12 R=1.791638e-03 res=1.7e-12 it= 20 lmin=+4.6e-19 [226s, 83.1 min]
+  [ 37/260] p=0.8 eps=0.05  sample6 N=12 R=2.804940e-03 res=2.1e-12 it= 19 lmin=+6.4e-18 [206s, 85.3 min]
+  [ 38/260] p=0.8 eps=0.05  sample7 N=12 R=5.001718e-04 res=3.2e-12 it= 18 lmin=+4.1e-22 [193s, 85.5 min]
+  [ 39/260] p=0.8 eps=0.05  sample8 N=12 R=2.219308e-04 res=3.5e-12 it= 17 lmin=+4.7e-24 [184s, 85.5 min]
+  [ 40/260] p=0.8 eps=0.05  sample9 N=12 R=1.755497e-03 res=2.4e-12 it= 20 lmin=+4.1e-19 [216s, 86.1 min]
+  [ 41/260] p=0.5 eps=0.20  sample0 N=12 R=1.173166e-02 res=1.3e-12 it= 22 lmin=+2.1e-14 [236s, 86.5 min]
+  [ 42/260] p=0.5 eps=0.20  sample1 N=12 R=2.285765e-02 res=3.9e-12 it= 23 lmin=+6.0e-13 [243s, 87.1 min]
+  [ 43/260] p=0.5 eps=0.20  sample2 N=12 R=1.169642e-02 res=1.4e-12 it= 22 lmin=+2.1e-14 [239s, 89.3 min]
+  [ 44/260] p=0.5 eps=0.20  sample4 N=12 R=1.091609e-02 res=2.0e-12 it= 22 lmin=+1.4e-14 [239s, 89.5 min]
+  [ 45/260] p=0.5 eps=0.20  sample3 N=12 R=1.673353e-02 res=3.3e-12 it= 22 lmin=+1.4e-13 [242s, 89.5 min]
+  [ 46/260] p=0.5 eps=0.20  sample5 N=12 R=3.191974e-02 res=6.2e-12 it= 22 lmin=+3.7e-12 [240s, 90.1 min]
+  [ 47/260] p=0.8 eps=0.00     ctrl N=12 R=0.000000e+00 res=0.0e+00 it=  1 lmin=+0.0e+00 [41s, 90.2 min]
+  [ 48/260] p=0.5 eps=0.20  sample6 N=12 R=5.301344e-02 res=1.3e-11 it= 21 lmin=+4.2e-11 [229s, 90.3 min]
+  [ 49/260] p=0.8 eps=0.20  sample0 N=10 R=1.160922e-02 res=2.5e-12 it= 22 lmin=+4.1e-12 [8s, 90.3 min]
+  [ 50/260] p=0.8 eps=0.20  sample1 N=10 R=2.243807e-02 res=2.1e-12 it= 24 lmin=+7.0e-11 [9s, 90.5 min]
+  [ 51/260] p=0.8 eps=0.20  sample2 N=10 R=1.157689e-02 res=4.7e-12 it= 21 lmin=+4.2e-12 [8s, 90.5 min]
+  [ 52/260] p=0.8 eps=0.20  sample3 N=10 R=1.649682e-02 res=3.4e-12 it= 22 lmin=+2.0e-11 [8s, 90.6 min]
+  [ 53/260] p=0.8 eps=0.20  sample4 N=10 R=1.080864e-02 res=3.1e-12 it= 22 lmin=+2.9e-12 [8s, 90.6 min]
+  [ 54/260] p=0.5 eps=0.00     ctrl N=12 R=0.000000e+00 res=0.0e+00 it=  1 lmin=+0.0e+00 [40s, 90.7 min]
+  [ 55/260] p=0.8 eps=0.20  sample6 N=10 R=5.126359e-02 res=8.9e-12 it= 22 lmin=+2.5e-09 [9s, 90.8 min]
+  [ 56/260] p=0.8 eps=0.20  sample5 N=10 R=3.116808e-02 res=5.3e-12 it= 23 lmin=+3.2e-10 [9s, 90.8 min]
+  [ 57/260] p=0.8 eps=0.20  sample7 N=10 R=8.338181e-03 res=1.6e-12 it= 23 lmin=+8.5e-13 [9s, 90.9 min]
+  [ 58/260] p=0.8 eps=0.20  sample8 N=10 R=3.580997e-03 res=2.8e-12 it= 20 lmin=+1.5e-14 [8s, 90.9 min]
+  [ 59/260] p=0.8 eps=0.20  sample9 N=10 R=3.050223e-02 res=1.8e-12 it= 25 lmin=+2.9e-10 [9s, 90.9 min]
+  [ 60/260] p=0.8 eps=0.15  sample0 N=10 R=6.472782e-03 res=1.7e-12 it= 21 lmin=+2.7e-13 [8s, 91.0 min]
+  [ 61/260] p=0.8 eps=0.15  sample1 N=10 R=1.223800e-02 res=3.9e-12 it= 22 lmin=+4.9e-12 [8s, 91.0 min]
+  [ 62/260] p=0.5 eps=0.20  sample7 N=12 R=8.403099e-03 res=1.8e-12 it= 22 lmin=+3.1e-15 [234s, 91.0 min]
+  [ 63/260] p=0.8 eps=0.15  sample2 N=10 R=6.431889e-03 res=2.9e-12 it= 20 lmin=+2.7e-13 [7s, 91.0 min]
+  [ 64/260] p=0.8 eps=0.15  sample3 N=10 R=9.127992e-03 res=2.3e-12 it= 21 lmin=+1.4e-12 [8s, 91.1 min]
+  [ 65/260] p=0.8 eps=0.15  sample4 N=10 R=5.992708e-03 res=9.9e-13 it= 22 lmin=+1.9e-13 [8s, 91.2 min]
+  [ 66/260] p=0.8 eps=0.15  sample6 N=10 R=2.720979e-02 res=5.3e-12 it= 21 lmin=+1.9e-10 [8s, 91.2 min]
+  [ 67/260] p=0.8 eps=0.15  sample5 N=10 R=1.688882e-02 res=3.1e-12 it= 22 lmin=+2.3e-11 [8s, 91.2 min]
+  [ 68/260] p=0.8 eps=0.15  sample7 N=10 R=4.601812e-03 res=9.7e-13 it= 22 lmin=+5.1e-14 [8s, 91.3 min]
+  [ 69/260] p=0.8 eps=0.15  sample8 N=10 R=2.006866e-03 res=1.7e-12 it= 19 lmin=+9.1e-16 [7s, 91.3 min]
+  [ 70/260] p=0.8 eps=0.10  sample0 N=10 R=2.856998e-03 res=2.3e-12 it= 19 lmin=+5.2e-15 [7s, 91.3 min]
+  [ 71/260] p=0.8 eps=0.15  sample9 N=10 R=1.653952e-02 res=4.7e-12 it= 22 lmin=+2.1e-11 [8s, 91.3 min]
+  [ 72/260] p=0.8 eps=0.10  sample2 N=10 R=2.831882e-03 res=6.5e-12 it= 17 lmin=+5.1e-15 [6s, 91.4 min]
+  [ 73/260] p=0.8 eps=0.10  sample1 N=10 R=5.307876e-03 res=3.6e-12 it= 20 lmin=+1.0e-13 [8s, 91.4 min]
+  [ 74/260] p=0.8 eps=0.10  sample3 N=10 R=4.005138e-03 res=1.2e-12 it= 20 lmin=+2.7e-14 [7s, 91.4 min]
+  [ 75/260] p=0.8 eps=0.10  sample4 N=10 R=2.634749e-03 res=1.1e-12 it= 20 lmin=+3.5e-15 [7s, 91.4 min]
+  [ 76/260] p=0.8 eps=0.10  sample5 N=10 R=7.289052e-03 res=3.9e-12 it= 20 lmin=+4.8e-13 [7s, 91.5 min]
+  [ 77/260] p=0.8 eps=0.10  sample6 N=10 R=1.153676e-02 res=1.6e-12 it= 20 lmin=+4.1e-12 [7s, 91.5 min]
+  [ 78/260] p=0.8 eps=0.10  sample8 N=10 R=8.892648e-04 res=3.5e-12 it= 16 lmin=+1.6e-17 [6s, 91.5 min]
+  [ 79/260] p=0.8 eps=0.10  sample7 N=10 R=2.016853e-03 res=2.3e-12 it= 19 lmin=+9.4e-16 [7s, 91.5 min]
+  [ 80/260] p=0.8 eps=0.05  sample0 N=10 R=7.111197e-04 res=5.6e-12 it= 15 lmin=+5.5e-18 [5s, 91.6 min]
+  [ 81/260] p=0.8 eps=0.10  sample9 N=10 R=7.141046e-03 res=5.1e-12 it= 20 lmin=+4.3e-13 [7s, 91.6 min]
+  [ 82/260] p=0.8 eps=0.05  sample2 N=10 R=7.038257e-04 res=1.0e-12 it= 16 lmin=+5.2e-18 [6s, 91.6 min]
+  [ 83/260] p=0.8 eps=0.05  sample1 N=10 R=1.306361e-03 res=1.7e-12 it= 18 lmin=+1.1e-16 [7s, 91.6 min]
+  [ 84/260] p=0.8 eps=0.05  sample3 N=10 R=9.931450e-04 res=7.9e-12 it= 15 lmin=+2.9e-17 [6s, 91.7 min]
+  [ 85/260] p=0.8 eps=0.05  sample4 N=10 R=6.542832e-04 res=5.2e-12 it= 15 lmin=+3.6e-18 [6s, 91.7 min]
+  [ 86/260] p=0.8 eps=0.05  sample5 N=10 R=1.788490e-03 res=4.9e-12 it= 17 lmin=+5.3e-16 [6s, 91.7 min]
+  [ 87/260] p=0.8 eps=0.05  sample6 N=10 R=2.797308e-03 res=2.0e-12 it= 17 lmin=+4.8e-15 [6s, 91.8 min]
+  [ 88/260] p=0.8 eps=0.05  sample7 N=10 R=4.999230e-04 res=4.1e-12 it= 15 lmin=+9.0e-19 [5s, 91.8 min]
+  [ 89/260] p=0.8 eps=0.05  sample8 N=10 R=2.218817e-04 res=7.3e-12 it= 14 lmin=+1.7e-20 [5s, 91.8 min]
+  [ 90/260] p=0.8 eps=0.05  sample9 N=10 R=1.752474e-03 res=7.4e-12 it= 16 lmin=+4.8e-16 [6s, 91.8 min]
+  [ 91/260] p=0.5 eps=0.20  sample0 N=10 R=1.160978e-02 res=4.7e-12 it= 19 lmin=+4.1e-12 [7s, 91.9 min]
+  [ 92/260] p=0.5 eps=0.20  sample1 N=10 R=2.244040e-02 res=5.8e-12 it= 21 lmin=+7.0e-11 [8s, 91.9 min]
+  [ 93/260] p=0.5 eps=0.20  sample2 N=10 R=1.157514e-02 res=1.0e-12 it= 21 lmin=+4.2e-12 [8s, 91.9 min]
+  [ 94/260] p=0.5 eps=0.20  sample3 N=10 R=1.649770e-02 res=4.9e-12 it= 20 lmin=+2.0e-11 [7s, 92.0 min]
+  [ 95/260] p=0.5 eps=0.20  sample4 N=10 R=1.080972e-02 res=5.7e-12 it= 19 lmin=+2.9e-12 [7s, 92.0 min]
+  [ 96/260] p=0.5 eps=0.20  sample5 N=10 R=3.116779e-02 res=7.0e-12 it= 20 lmin=+3.2e-10 [7s, 92.0 min]
+  [ 97/260] p=0.5 eps=0.20  sample6 N=10 R=5.126313e-02 res=1.1e-11 it= 20 lmin=+2.5e-09 [7s, 92.1 min]
+  [ 98/260] p=0.8 eps=0.00     ctrl N=10 R=0.000000e+00 res=0.0e+00 it=  1 lmin=+0.0e+00 [1s, 92.1 min]
+  [ 99/260] p=0.5 eps=0.20  sample8 N=10 R=3.581410e-03 res=8.7e-12 it= 17 lmin=+1.5e-14 [6s, 92.1 min]
+  [100/260] p=0.5 eps=0.20  sample7 N=10 R=8.338337e-03 res=9.7e-13 it= 21 lmin=+8.5e-13 [8s, 92.1 min]
+  [101/260] p=0.8 eps=0.20  sample0 N= 8 R=1.148719e-02 res=1.4e-12 it= 19 lmin=+8.1e-10 [0s, 92.1 min]
+  [102/260] p=0.8 eps=0.20  sample1 N= 8 R=2.201983e-02 res=2.5e-12 it= 20 lmin=+7.9e-09 [0s, 92.1 min]
+  [103/260] p=0.8 eps=0.20  sample2 N= 8 R=1.145551e-02 res=2.5e-12 it= 18 lmin=+8.1e-10 [0s, 92.1 min]
+  [104/260] p=0.5 eps=0.00     ctrl N=10 R=0.000000e+00 res=0.0e+00 it=  1 lmin=+0.0e+00 [1s, 92.1 min]
+  [105/260] p=0.8 eps=0.20  sample3 N= 8 R=1.626110e-02 res=1.7e-12 it= 19 lmin=+2.9e-09 [0s, 92.1 min]
+  [106/260] p=0.8 eps=0.20  sample4 N= 8 R=1.070262e-02 res=1.8e-12 it= 19 lmin=+6.1e-10 [0s, 92.1 min]
+  [107/260] p=0.8 eps=0.20  sample5 N= 8 R=3.041082e-02 res=1.1e-11 it= 18 lmin=+2.7e-08 [0s, 92.1 min]
+  [108/260] p=0.8 eps=0.20  sample6 N= 8 R=4.947987e-02 res=3.3e-12 it= 19 lmin=+1.4e-07 [0s, 92.1 min]
+  [109/260] p=0.8 eps=0.20  sample7 N= 8 R=8.273294e-03 res=1.5e-12 it= 19 lmin=+2.3e-10 [0s, 92.1 min]
+  [110/260] p=0.8 eps=0.20  sample8 N= 8 R=3.568594e-03 res=1.8e-12 it= 17 lmin=+8.9e-12 [0s, 92.1 min]
+  [111/260] p=0.8 eps=0.20  sample9 N= 8 R=2.977504e-02 res=8.7e-12 it= 19 lmin=+2.5e-08 [0s, 92.1 min]
+  [112/260] p=0.8 eps=0.15  sample0 N= 8 R=6.433191e-03 res=7.5e-12 it= 16 lmin=+9.0e-11 [0s, 92.1 min]
+  [113/260] p=0.8 eps=0.15  sample1 N= 8 R=1.210322e-02 res=1.8e-12 it= 19 lmin=+9.3e-10 [0s, 92.1 min]
+  [114/260] p=0.8 eps=0.15  sample2 N= 8 R=6.392799e-03 res=2.3e-12 it= 17 lmin=+8.9e-11 [0s, 92.1 min]
+  [115/260] p=0.8 eps=0.15  sample3 N= 8 R=9.051238e-03 res=1.0e-12 it= 18 lmin=+3.3e-10 [0s, 92.1 min]
+  [116/260] p=0.8 eps=0.15  sample4 N= 8 R=5.958725e-03 res=3.8e-12 it= 17 lmin=+6.7e-11 [0s, 92.1 min]
+  [117/260] p=0.8 eps=0.15  sample5 N= 8 R=1.664134e-02 res=1.2e-11 it= 17 lmin=+3.2e-09 [0s, 92.1 min]
+  [118/260] p=0.8 eps=0.15  sample7 N= 8 R=4.581436e-03 res=6.1e-12 it= 16 lmin=+2.4e-11 [0s, 92.1 min]
+  [119/260] p=0.8 eps=0.15  sample6 N= 8 R=2.661604e-02 res=2.1e-12 it= 18 lmin=+1.7e-08 [0s, 92.1 min]
+  [120/260] p=0.8 eps=0.15  sample8 N= 8 R=2.002915e-03 res=1.2e-12 it= 16 lmin=+9.3e-13 [0s, 92.1 min]
+  [121/260] p=0.8 eps=0.15  sample9 N= 8 R=1.630187e-02 res=2.6e-12 it= 19 lmin=+3.0e-09 [0s, 92.1 min]
+  [122/260] p=0.8 eps=0.10  sample0 N= 8 R=2.849040e-03 res=1.6e-12 it= 16 lmin=+3.8e-12 [0s, 92.1 min]
+  [123/260] p=0.8 eps=0.10  sample1 N= 8 R=5.281001e-03 res=5.7e-12 it= 16 lmin=+4.1e-11 [0s, 92.1 min]
+  [124/260] p=0.8 eps=0.10  sample2 N= 8 R=2.824064e-03 res=7.0e-12 it= 14 lmin=+3.7e-12 [0s, 92.1 min]
+  [125/260] p=0.8 eps=0.10  sample3 N= 8 R=3.989678e-03 res=2.6e-12 it= 16 lmin=+1.4e-11 [0s, 92.2 min]
+  [126/260] p=0.8 eps=0.10  sample5 N= 8 R=7.239201e-03 res=5.0e-12 it= 16 lmin=+1.4e-10 [0s, 92.2 min]
+  [127/260] p=0.8 eps=0.10  sample4 N= 8 R=2.627977e-03 res=1.6e-12 it= 16 lmin=+2.8e-12 [0s, 92.2 min]
+  [128/260] p=0.8 eps=0.10  sample6 N= 8 R=1.141621e-02 res=2.0e-12 it= 17 lmin=+8.1e-10 [0s, 92.2 min]
+  [129/260] p=0.8 eps=0.10  sample7 N= 8 R=2.012854e-03 res=2.3e-12 it= 16 lmin=+9.6e-13 [0s, 92.2 min]
+  [130/260] p=0.8 eps=0.10  sample8 N= 8 R=8.884809e-04 res=3.4e-12 it= 15 lmin=+3.8e-14 [0s, 92.2 min]
+  [131/260] p=0.8 eps=0.10  sample9 N= 8 R=7.093178e-03 res=7.6e-13 it= 18 lmin=+1.3e-10 [0s, 92.2 min]
+  [132/260] p=0.8 eps=0.05  sample0 N= 8 R=7.106172e-04 res=1.1e-12 it= 15 lmin=+1.6e-14 [0s, 92.2 min]
+  [133/260] p=0.8 eps=0.05  sample1 N= 8 R=1.304674e-03 res=8.4e-12 it= 13 lmin=+1.7e-13 [0s, 92.2 min]
+  [134/260] p=0.5 eps=0.20  sample9 N=10 R=3.050637e-02 res=3.4e-12 it= 21 lmin=+2.9e-10 [7s, 92.2 min]
+  [135/260] p=0.8 eps=0.05  sample2 N= 8 R=7.033335e-04 res=1.1e-12 it= 15 lmin=+1.5e-14 [0s, 92.2 min]
+  [136/260] p=0.8 eps=0.05  sample3 N= 8 R=9.921678e-04 res=9.4e-13 it= 14 lmin=+5.9e-14 [0s, 92.2 min]
+  [137/260] p=0.8 eps=0.05  sample4 N= 8 R=6.538578e-04 res=1.1e-12 it= 15 lmin=+1.1e-14 [0s, 92.2 min]
+  [138/260] p=0.8 eps=0.05  sample5 N= 8 R=1.785343e-03 res=2.4e-12 it= 15 lmin=+6.1e-13 [0s, 92.2 min]
+  [139/260] p=0.8 eps=0.05  sample6 N= 8 R=2.789676e-03 res=2.2e-12 it= 15 lmin=+3.5e-12 [0s, 92.2 min]
+  [140/260] p=0.8 eps=0.05  sample7 N= 8 R=4.996741e-04 res=2.1e-12 it= 14 lmin=+3.8e-15 [0s, 92.2 min]
+  [141/260] p=0.8 eps=0.05  sample8 N= 8 R=2.218325e-04 res=3.7e-12 it= 12 lmin=+1.5e-16 [0s, 92.2 min]
+  [142/260] p=0.8 eps=0.05  sample9 N= 8 R=1.749452e-03 res=3.2e-12 it= 15 lmin=+5.6e-13 [0s, 92.2 min]
+  [143/260] p=0.5 eps=0.20  sample0 N= 8 R=1.148780e-02 res=1.5e-12 it= 18 lmin=+8.1e-10 [0s, 92.2 min]
+  [144/260] p=0.5 eps=0.20  sample2 N= 8 R=1.145389e-02 res=2.7e-12 it= 18 lmin=+8.1e-10 [0s, 92.2 min]
+  [145/260] p=0.5 eps=0.20  sample1 N= 8 R=2.202206e-02 res=2.6e-12 it= 19 lmin=+7.9e-09 [0s, 92.2 min]
+  [146/260] p=0.5 eps=0.20  sample3 N= 8 R=1.626162e-02 res=3.3e-12 it= 18 lmin=+2.9e-09 [0s, 92.2 min]
+  [147/260] p=0.5 eps=0.20  sample4 N= 8 R=1.070339e-02 res=1.6e-12 it= 18 lmin=+6.1e-10 [0s, 92.2 min]
+  [148/260] p=0.5 eps=0.20  sample5 N= 8 R=3.041009e-02 res=1.8e-12 it= 19 lmin=+2.7e-08 [0s, 92.2 min]
+  [149/260] p=0.5 eps=0.20  sample6 N= 8 R=4.947926e-02 res=4.2e-12 it= 18 lmin=+1.4e-07 [0s, 92.2 min]
+  [150/260] p=0.5 eps=0.20  sample7 N= 8 R=8.273491e-03 res=1.3e-12 it= 18 lmin=+2.3e-10 [0s, 92.2 min]
+  [151/260] p=0.8 eps=0.00     ctrl N= 8 R=0.000000e+00 res=0.0e+00 it=  1 lmin=+0.0e+00 [0s, 92.2 min]
+  [152/260] p=0.5 eps=0.00     ctrl N= 8 R=0.000000e+00 res=0.0e+00 it=  1 lmin=+0.0e+00 [0s, 92.2 min]
+  [153/260] p=0.8 eps=0.20  sample0 N= 6 R=1.136504e-02 res=1.0e-11 it= 13 lmin=+1.6e-07 [0s, 92.2 min]
+  [154/260] p=0.5 eps=0.20  sample8 N= 8 R=3.568943e-03 res=1.2e-12 it= 17 lmin=+8.9e-12 [0s, 92.2 min]
+  [155/260] p=0.5 eps=0.20  sample9 N= 8 R=2.977807e-02 res=1.4e-11 it= 17 lmin=+2.5e-08 [0s, 92.2 min]
+  [156/260] p=0.8 eps=0.20  sample2 N= 6 R=1.133423e-02 res=1.7e-12 it= 15 lmin=+1.6e-07 [0s, 92.2 min]
+  [157/260] p=0.8 eps=0.20  sample1 N= 6 R=2.160217e-02 res=1.2e-12 it= 16 lmin=+8.8e-07 [0s, 92.2 min]
+  [158/260] p=0.8 eps=0.20  sample3 N= 6 R=1.602545e-02 res=1.9e-12 it= 15 lmin=+4.1e-07 [0s, 92.2 min]
+  [159/260] p=0.8 eps=0.20  sample4 N= 6 R=1.059720e-02 res=1.3e-12 it= 15 lmin=+1.3e-07 [0s, 92.2 min]
+  [160/260] p=0.8 eps=0.20  sample6 N= 6 R=4.766891e-02 res=1.1e-11 it= 14 lmin=+8.0e-06 [0s, 92.2 min]
+  [161/260] p=0.8 eps=0.20  sample5 N= 6 R=2.964996e-02 res=1.0e-12 it= 16 lmin=+2.3e-06 [0s, 92.2 min]
+  [162/260] p=0.8 eps=0.20  sample7 N= 6 R=8.208398e-03 res=6.0e-12 it= 13 lmin=+6.0e-08 [0s, 92.2 min]
+  [163/260] p=0.8 eps=0.20  sample8 N= 6 R=3.556308e-03 res=1.1e-12 it= 14 lmin=+5.2e-09 [0s, 92.2 min]
+  [164/260] p=0.8 eps=0.20  sample9 N= 6 R=2.904612e-02 res=4.9e-12 it= 15 lmin=+2.1e-06 [0s, 92.2 min]
+  [165/260] p=0.8 eps=0.15  sample0 N= 6 R=6.393588e-03 res=8.9e-13 it= 14 lmin=+3.0e-08 [0s, 92.2 min]
+  [166/260] p=0.8 eps=0.15  sample1 N= 6 R=1.196869e-02 res=7.2e-12 it= 13 lmin=+1.7e-07 [0s, 92.2 min]
+  [167/260] p=0.8 eps=0.15  sample3 N= 6 R=8.974540e-03 res=1.7e-12 it= 14 lmin=+8.0e-08 [0s, 92.2 min]
+  [168/260] p=0.8 eps=0.15  sample4 N= 6 R=5.924861e-03 res=1.2e-12 it= 14 lmin=+2.4e-08 [0s, 92.2 min]
+  [169/260] p=0.8 eps=0.15  sample2 N= 6 R=6.353737e-03 res=1.4e-12 it= 14 lmin=+2.9e-08 [0s, 92.2 min]
+  [170/260] p=0.8 eps=0.15  sample5 N= 6 R=1.639359e-02 res=1.0e-11 it= 13 lmin=+4.5e-07 [0s, 92.2 min]
+  [171/260] p=0.8 eps=0.15  sample7 N= 6 R=4.561062e-03 res=6.5e-12 it= 12 lmin=+1.1e-08 [0s, 92.2 min]
+  [172/260] p=0.8 eps=0.15  sample9 N= 6 R=1.606430e-02 res=4.9e-12 it= 14 lmin=+4.2e-07 [0s, 92.2 min]
+  [173/260] p=0.8 eps=0.15  sample6 N= 6 R=2.601942e-02 res=7.5e-12 it= 13 lmin=+1.6e-06 [0s, 92.2 min]
+  [174/260] p=0.8 eps=0.15  sample8 N= 6 R=1.998987e-03 res=1.7e-12 it= 13 lmin=+9.5e-10 [0s, 92.2 min]
+  [175/260] p=0.8 eps=0.10  sample2 N= 6 R=2.816250e-03 res=6.2e-12 it= 11 lmin=+2.7e-09 [0s, 92.2 min]
+  [176/260] p=0.8 eps=0.10  sample3 N= 6 R=3.974226e-03 res=7.9e-13 it= 13 lmin=+7.4e-09 [0s, 92.2 min]
+  [177/260] p=0.8 eps=0.10  sample0 N= 6 R=2.841082e-03 res=2.0e-12 it= 12 lmin=+2.7e-09 [0s, 92.2 min]
+  [178/260] p=0.8 eps=0.10  sample1 N= 6 R=5.254160e-03 res=5.3e-12 it= 12 lmin=+1.6e-08 [0s, 92.2 min]
+  [179/260] p=0.8 eps=0.10  sample4 N= 6 R=2.621216e-03 res=7.7e-13 it= 13 lmin=+2.2e-09 [0s, 92.2 min]
+  [180/260] p=0.8 eps=0.10  sample7 N= 6 R=2.008856e-03 res=4.5e-12 it= 11 lmin=+9.8e-10 [0s, 92.2 min]
+  [181/260] p=0.8 eps=0.10  sample5 N= 6 R=7.189352e-03 res=4.1e-12 it= 12 lmin=+4.2e-08 [0s, 92.2 min]
+  [182/260] p=0.8 eps=0.10  sample6 N= 6 R=1.129554e-02 res=1.3e-12 it= 13 lmin=+1.6e-07 [0s, 92.2 min]
+  [183/260] p=0.8 eps=0.10  sample8 N= 6 R=8.876990e-04 res=8.4e-12 it= 10 lmin=+8.6e-11 [0s, 92.2 min]
+  [184/260] p=0.8 eps=0.05  sample0 N= 6 R=7.101147e-04 res=1.2e-12 it= 10 lmin=+4.4e-11 [0s, 92.2 min]
+  [185/260] p=0.8 eps=0.10  sample9 N= 6 R=7.045341e-03 res=9.8e-13 it= 14 lmin=+4.0e-08 [0s, 92.2 min]
+  [186/260] p=0.8 eps=0.05  sample1 N= 6 R=1.302989e-03 res=5.8e-12 it= 10 lmin=+2.7e-10 [0s, 92.2 min]
+  [187/260] p=0.8 eps=0.05  sample2 N= 6 R=7.028414e-04 res=7.9e-13 it= 10 lmin=+4.3e-11 [0s, 92.2 min]
+  [188/260] p=0.8 eps=0.05  sample3 N= 6 R=9.911907e-04 res=2.5e-12 it= 10 lmin=+1.2e-10 [0s, 92.2 min]
+  [189/260] p=0.8 eps=0.05  sample4 N= 6 R=6.534325e-04 res=8.5e-13 it= 10 lmin=+3.5e-11 [0s, 92.2 min]
+  [190/260] p=0.8 eps=0.05  sample5 N= 6 R=1.782195e-03 res=6.7e-12 it= 10 lmin=+6.9e-10 [0s, 92.2 min]
+  [191/260] p=0.8 eps=0.05  sample6 N= 6 R=2.782043e-03 res=2.8e-12 it= 10 lmin=+2.6e-09 [0s, 92.2 min]
+  [192/260] p=0.8 eps=0.05  sample8 N= 6 R=2.217835e-04 res=4.0e-12 it= 11 lmin=+1.4e-12 [0s, 92.2 min]
+  [193/260] p=0.8 eps=0.05  sample7 N= 6 R=4.994253e-04 res=7.2e-13 it= 10 lmin=+1.5e-11 [0s, 92.2 min]
+  [194/260] p=0.8 eps=0.05  sample9 N= 6 R=1.746430e-03 res=1.3e-12 it= 11 lmin=+6.5e-10 [0s, 92.2 min]
+  [195/260] p=0.5 eps=0.20  sample0 N= 6 R=1.136572e-02 res=9.5e-13 it= 15 lmin=+1.6e-07 [0s, 92.2 min]
+  [196/260] p=0.5 eps=0.20  sample2 N= 6 R=1.133302e-02 res=2.5e-12 it= 15 lmin=+1.6e-07 [0s, 92.2 min]
+  [197/260] p=0.5 eps=0.20  sample3 N= 6 R=1.602552e-02 res=4.2e-12 it= 14 lmin=+4.1e-07 [0s, 92.2 min]
+  [198/260] p=0.5 eps=0.20  sample1 N= 6 R=2.160393e-02 res=9.4e-13 it= 16 lmin=+8.8e-07 [0s, 92.2 min]
+  [199/260] p=0.5 eps=0.20  sample4 N= 6 R=1.059741e-02 res=2.3e-12 it= 15 lmin=+1.3e-07 [0s, 92.2 min]
+  [200/260] p=0.5 eps=0.20  sample5 N= 6 R=2.964825e-02 res=9.9e-13 it= 16 lmin=+2.3e-06 [0s, 92.2 min]
+  [201/260] p=0.5 eps=0.20  sample7 N= 6 R=8.208515e-03 res=1.1e-12 it= 15 lmin=+6.0e-08 [0s, 92.2 min]
+  [202/260] p=0.5 eps=0.20  sample6 N= 6 R=4.766807e-02 res=1.6e-12 it= 16 lmin=+8.0e-06 [0s, 92.2 min]
+  [203/260] p=0.5 eps=0.20  sample8 N= 6 R=3.556503e-03 res=7.3e-12 it= 13 lmin=+5.2e-09 [0s, 92.2 min]
+  [204/260] p=0.8 eps=0.00     ctrl N= 6 R=0.000000e+00 res=0.0e+00 it=  1 lmin=+0.0e+00 [0s, 92.2 min]
+  [205/260] p=0.8 eps=0.20  sample0 N= 4 R=1.124278e-02 res=8.6e-12 it=  9 lmin=+2.9e-05 [0s, 92.2 min]
+  [206/260] p=0.5 eps=0.20  sample9 N= 6 R=2.904786e-02 res=6.6e-12 it= 15 lmin=+2.1e-06 [0s, 92.2 min]
+  [207/260] p=0.5 eps=0.00     ctrl N= 6 R=0.000000e+00 res=0.0e+00 it=  1 lmin=+0.0e+00 [0s, 92.2 min]
+  [208/260] p=0.8 eps=0.20  sample1 N= 4 R=2.118759e-02 res=9.0e-12 it= 10 lmin=+9.5e-05 [0s, 92.2 min]
+  [209/260] p=0.8 eps=0.20  sample2 N= 4 R=1.121415e-02 res=1.0e-12 it= 10 lmin=+3.0e-05 [0s, 92.2 min]
+  [210/260] p=0.8 eps=0.20  sample4 N= 4 R=1.049300e-02 res=3.2e-12 it= 10 lmin=+2.6e-05 [0s, 92.2 min]
+  [211/260] p=0.8 eps=0.20  sample3 N= 4 R=1.578921e-02 res=2.5e-12 it= 10 lmin=+5.7e-05 [0s, 92.2 min]
+  [212/260] p=0.8 eps=0.20  sample5 N= 4 R=2.888795e-02 res=4.5e-13 it= 12 lmin=+1.8e-04 [0s, 92.2 min]
+  [213/260] p=0.8 eps=0.20  sample6 N= 4 R=4.583722e-02 res=6.8e-12 it= 10 lmin=+4.3e-04 [0s, 92.2 min]
+  [214/260] p=0.8 eps=0.20  sample7 N= 4 R=8.143516e-03 res=1.8e-12 it= 10 lmin=+1.5e-05 [0s, 92.2 min]
+  [215/260] p=0.8 eps=0.20  sample8 N= 4 R=3.544259e-03 res=4.2e-12 it=  9 lmin=+3.0e-06 [0s, 92.2 min]
+  [216/260] p=0.8 eps=0.20  sample9 N= 4 R=2.831860e-02 res=1.1e-12 it= 11 lmin=+1.7e-04 [0s, 92.2 min]
+  [217/260] p=0.8 eps=0.15  sample1 N= 4 R=1.183485e-02 res=8.9e-12 it=  9 lmin=+3.2e-05 [0s, 92.2 min]
+  [218/260] p=0.8 eps=0.15  sample0 N= 4 R=6.353971e-03 res=2.8e-12 it=  9 lmin=+9.7e-06 [0s, 92.2 min]
+  [219/260] p=0.8 eps=0.15  sample3 N= 4 R=8.897784e-03 res=4.6e-12 it=  9 lmin=+1.9e-05 [0s, 92.2 min]
+  [220/260] p=0.8 eps=0.15  sample2 N= 4 R=6.314906e-03 res=3.9e-12 it=  9 lmin=+9.6e-06 [0s, 92.2 min]
+  [221/260] p=0.8 eps=0.15  sample4 N= 4 R=5.891230e-03 res=5.4e-12 it=  9 lmin=+8.3e-06 [0s, 92.2 min]
+  [222/260] p=0.8 eps=0.15  sample5 N= 4 R=1.614594e-02 res=3.0e-12 it= 10 lmin=+6.0e-05 [0s, 92.2 min]
+  [223/260] p=0.8 eps=0.15  sample7 N= 4 R=4.540690e-03 res=3.0e-12 it=  9 lmin=+5.0e-06 [0s, 92.2 min]
+  [224/260] p=0.8 eps=0.15  sample8 N= 4 R=1.995103e-03 res=5.2e-13 it=  9 lmin=+9.7e-07 [0s, 92.2 min]
+  [225/260] p=0.8 eps=0.15  sample9 N= 4 R=1.582734e-02 res=1.4e-12 it= 10 lmin=+5.8e-05 [0s, 92.2 min]
+  [226/260] p=0.8 eps=0.15  sample6 N= 4 R=2.542064e-02 res=1.4e-13 it= 11 lmin=+1.4e-04 [0s, 92.2 min]
+  [227/260] p=0.8 eps=0.10  sample0 N= 4 R=2.833123e-03 res=9.0e-12 it=  7 lmin=+2.0e-06 [0s, 92.2 min]
+  [228/260] p=0.8 eps=0.10  sample3 N= 4 R=3.958772e-03 res=1.8e-12 it=  8 lmin=+3.8e-06 [0s, 92.2 min]
+  [229/260] p=0.8 eps=0.10  sample1 N= 4 R=5.227386e-03 res=8.0e-12 it=  8 lmin=+6.5e-06 [0s, 92.2 min]
+  [230/260] p=0.8 eps=0.10  sample2 N= 4 R=2.808456e-03 res=2.2e-12 it=  9 lmin=+1.9e-06 [0s, 92.2 min]
+  [231/260] p=0.8 eps=0.10  sample5 N= 4 R=7.139533e-03 res=7.4e-12 it=  8 lmin=+1.2e-05 [0s, 92.2 min]
+  [232/260] p=0.8 eps=0.10  sample7 N= 4 R=2.004857e-03 res=4.7e-12 it=  8 lmin=+9.9e-07 [0s, 92.2 min]
+  [233/260] p=0.8 eps=0.10  sample4 N= 4 R=2.614476e-03 res=3.2e-12 it=  8 lmin=+1.7e-06 [0s, 92.2 min]
+  [234/260] p=0.8 eps=0.10  sample6 N= 4 R=1.117479e-02 res=6.0e-13 it=  9 lmin=+3.0e-05 [0s, 92.2 min]
+  [235/260] p=0.8 eps=0.10  sample8 N= 4 R=8.869211e-04 res=1.4e-12 it=  8 lmin=+1.9e-07 [0s, 92.2 min]
+  [236/260] p=0.8 eps=0.10  sample9 N= 4 R=6.997585e-03 res=1.1e-12 it=  9 lmin=+1.2e-05 [0s, 92.2 min]
+  [237/260] p=0.8 eps=0.05  sample0 N= 4 R=7.096123e-04 res=7.6e-14 it=  7 lmin=+1.3e-07 [0s, 92.2 min]
+  [238/260] p=0.8 eps=0.05  sample1 N= 4 R=1.301304e-03 res=5.4e-13 it=  7 lmin=+4.2e-07 [0s, 92.2 min]
+  [239/260] p=0.8 eps=0.05  sample4 N= 4 R=6.530076e-04 res=2.1e-13 it=  8 lmin=+1.1e-07 [0s, 92.2 min]
+  [240/260] p=0.8 eps=0.05  sample3 N= 4 R=9.902137e-04 res=2.5e-13 it=  7 lmin=+2.4e-07 [0s, 92.2 min]
+  [241/260] p=0.8 eps=0.05  sample2 N= 4 R=7.023496e-04 res=3.3e-12 it=  7 lmin=+1.2e-07 [0s, 92.2 min]
+  [242/260] p=0.8 eps=0.05  sample5 N= 4 R=1.779048e-03 res=2.0e-12 it=  7 lmin=+7.8e-07 [0s, 92.2 min]
+  [243/260] p=0.8 eps=0.05  sample6 N= 4 R=2.774409e-03 res=2.8e-12 it=  7 lmin=+1.9e-06 [0s, 92.2 min]
+  [244/260] p=0.8 eps=0.05  sample7 N= 4 R=4.991764e-04 res=8.4e-12 it=  6 lmin=+6.2e-08 [0s, 92.2 min]
+  [245/260] p=0.8 eps=0.05  sample8 N= 4 R=2.217344e-04 res=9.5e-12 it=  6 lmin=+1.2e-08 [0s, 92.2 min]
+  [246/260] p=0.8 eps=0.05  sample9 N= 4 R=1.743409e-03 res=9.5e-12 it=  7 lmin=+7.5e-07 [0s, 92.2 min]
+  [247/260] p=0.5 eps=0.20  sample2 N= 4 R=1.121368e-02 res=2.2e-12 it= 10 lmin=+3.0e-05 [0s, 92.2 min]
+  [248/260] p=0.5 eps=0.20  sample0 N= 4 R=1.124335e-02 res=3.3e-12 it= 10 lmin=+2.9e-05 [0s, 92.2 min]
+  [249/260] p=0.5 eps=0.20  sample1 N= 4 R=2.118791e-02 res=3.2e-12 it= 11 lmin=+9.5e-05 [0s, 92.2 min]
+  [250/260] p=0.5 eps=0.20  sample3 N= 4 R=1.578899e-02 res=7.2e-13 it= 12 lmin=+5.7e-05 [0s, 92.2 min]
+  [251/260] p=0.5 eps=0.20  sample5 N= 4 R=2.888463e-02 res=1.6e-12 it= 11 lmin=+1.8e-04 [0s, 92.2 min]
+  [252/260] p=0.5 eps=0.20  sample6 N= 4 R=4.583633e-02 res=2.0e-12 it= 11 lmin=+4.3e-04 [0s, 92.2 min]
+  [253/260] p=0.5 eps=0.20  sample4 N= 4 R=1.049265e-02 res=7.9e-12 it= 10 lmin=+2.6e-05 [0s, 92.2 min]
+  [254/260] p=0.5 eps=0.20  sample7 N= 4 R=8.143186e-03 res=4.2e-12 it= 10 lmin=+1.5e-05 [0s, 92.2 min]
+  [255/260] p=0.8 eps=0.00     ctrl N= 4 R=0.000000e+00 res=0.0e+00 it=  1 lmin=+0.0e+00 [0s, 92.2 min]
+  [256/260] p=0.5 eps=0.20  sample8 N= 4 R=3.544182e-03 res=8.7e-12 it=  9 lmin=+3.0e-06 [0s, 92.2 min]
+  [257/260] p=0.5 eps=0.20  sample9 N= 4 R=2.832099e-02 res=1.1e-12 it= 11 lmin=+1.7e-04 [0s, 92.2 min]
+  [258/260] p=0.5 eps=0.00     ctrl N= 4 R=0.000000e+00 res=0.0e+00 it=  1 lmin=+0.0e+00 [0s, 92.2 min]
+  [259/260] p=0.5 eps=0.20  sample8 N=12 R=3.593876e-03 res=8.3e-13 it= 21 lmin=+2.5e-17 [192s, 92.5 min]
+  [260/260] p=0.5 eps=0.20  sample9 N=12 R=3.123009e-02 res=4.0e-12 it= 23 lmin=+3.3e-12 [194s, 92.7 min]
+
+Saved grid -> C:\Users\nzier\Lindbladian_steady_states\experiments\results\drift_circuit_exact_finite_pbc.pkl
+
+=== p=0.8, eps=0.2: R(N/4, 3N/4) / q  (infinite p=0.8: 3.8880) ===
+  s          q       N=4       N=6       N=8      N=10      N=12
+  0  5.680e-03    1.9792    2.0007    2.0223    2.0437    2.0652
+  1  1.039e-02    2.0383    2.0782    2.1184    2.1586    2.1987
+  2  5.619e-03    1.9956    2.0170    2.0386    2.0602    2.0818
+  3  7.923e-03    1.9928    2.0227    2.0524    2.0822    2.1119
+  4  5.222e-03    2.0092    2.0292    2.0494    2.0697    2.0900
+  5  1.422e-02    2.0320    2.0856    2.1391    2.1924    2.2453
+  6  2.214e-02    2.0701    2.1528    2.2346    2.3151    2.3942
+  7  3.988e-03    2.0421    2.0583    2.0746    2.0909    2.1071
+  8  1.774e-03    1.9981    2.0049    2.0118    2.0188    2.0258
+  9  1.393e-02    2.0328    2.0850    2.1374    2.1896    2.2415
+          mean    2.0190    2.0534    2.0878    2.1221    2.1561
+        spread     4.50%     7.40%    10.67%    13.97%    17.09%
+
+=== p=0.8, eps=0.15: R(N/4, 3N/4) / q  (infinite p=0.8: 3.9375) ===
+  s          q       N=4       N=6       N=8      N=10      N=12
+  0  3.195e-03    1.9886    2.0010    2.0134    2.0258    2.0382
+  1  5.847e-03    2.0241    2.0470    2.0700    2.0930    2.1161
+  2  3.161e-03    1.9978    2.0101    2.0225    2.0348    2.0472
+  3  4.457e-03    1.9965    2.0137    2.0309    2.0482    2.0654
+  4  2.938e-03    2.0055    2.0169    2.0284    2.0400    2.0516
+  5  7.997e-03    2.0191    2.0500    2.0810    2.1120    2.1429
+  6  1.246e-02    2.0409    2.0890    2.1369    2.1846    2.2320
+  7  2.243e-03    2.0242    2.0333    2.0424    2.0515    2.0605
+  8  9.978e-04    1.9995    2.0034    2.0074    2.0113    2.0153
+  9  7.836e-03    2.0198    2.0501    2.0804    2.1107    2.1410
+          mean    2.0116    2.0315    2.0513    2.0712    2.0910
+        spread     2.60%     4.33%     6.32%     8.37%    10.36%
+
+=== p=0.8, eps=0.1: R(N/4, 3N/4) / q  (infinite p=0.8: 3.9732) ===
+  s          q       N=4       N=6       N=8      N=10      N=12
+  0  1.420e-03    1.9950    2.0006    2.0062    2.0118    2.0174
+  1  2.599e-03    2.0116    2.0219    2.0322    2.0425    2.0529
+  2  1.405e-03    1.9991    2.0047    2.0102    2.0158    2.0214
+  3  1.981e-03    1.9986    2.0064    2.0142    2.0220    2.0299
+  4  1.306e-03    2.0025    2.0077    2.0129    2.0180    2.0232
+  5  3.554e-03    2.0088    2.0228    2.0369    2.0509    2.0649
+  6  5.536e-03    2.0187    2.0405    2.0623    2.0841    2.1058
+  7  9.970e-04    2.0109    2.0149    2.0190    2.0230    2.0270
+  8  4.435e-04    2.0000    2.0017    2.0035    2.0053    2.0070
+  9  3.483e-03    2.0093    2.0230    2.0367    2.0505    2.0642
+          mean    2.0055    2.0144    2.0234    2.0324    2.0414
+        spread     1.18%     1.98%     2.90%     3.88%     4.84%
+
+=== p=0.8, eps=0.05: R(N/4, 3N/4) / q  (infinite p=0.8: 3.9943) ===
+  s          q       N=4       N=6       N=8      N=10      N=12
+  0  3.550e-04    1.9988    2.0002    2.0016    2.0030    2.0044
+  1  6.497e-04    2.0030    2.0056    2.0082    2.0108    2.0134
+  2  3.512e-04    1.9998    2.0012    2.0026    2.0040    2.0054
+  3  4.952e-04    1.9997    2.0017    2.0036    2.0056    2.0076
+  4  3.264e-04    2.0006    2.0019    2.0032    2.0046    2.0059
+  5  8.885e-04    2.0023    2.0058    2.0093    2.0129    2.0164
+  6  1.384e-03    2.0047    2.0103    2.0158    2.0213    2.0268
+  7  2.492e-04    2.0028    2.0038    2.0048    2.0058    2.0068
+  8  1.109e-04    2.0000    2.0005    2.0009    2.0014    2.0018
+  9  8.707e-04    2.0024    2.0059    2.0093    2.0128    2.0163
+          mean    2.0014    2.0037    2.0059    2.0082    2.0105
+        spread     0.30%     0.50%     0.74%     0.99%     1.24%
+
+=== p=0.5, eps=0.2: R(N/4, 3N/4) / q  (infinite p=0.8: 3.8880) ===
+  s          q       N=4       N=6       N=8      N=10      N=12
+  0  5.680e-03    1.9793    2.0009    2.0224    2.0438    2.0653
+  1  1.039e-02    2.0383    2.0784    2.1186    2.1588    2.1990
+  2  5.619e-03    1.9955    2.0168    2.0383    2.0599    2.0814
+  3  7.923e-03    1.9928    2.0227    2.0525    2.0823    2.1120
+  4  5.222e-03    2.0092    2.0292    2.0495    2.0699    2.0903
+  5  1.422e-02    2.0318    2.0855    2.1391    2.1924    2.2453
+  6  2.214e-02    2.0700    2.1528    2.2346    2.3151    2.3942
+  7  3.988e-03    2.0420    2.0584    2.0746    2.0909    2.1071
+  8  1.774e-03    1.9980    2.0050    2.0120    2.0190    2.0260
+  9  1.393e-02    2.0330    2.0852    2.1376    2.1899    2.2418
+          mean    2.0190    2.0535    2.0879    2.1222    2.1562
+        spread     4.49%     7.40%    10.66%    13.95%    17.07%
+
+worst residual 1.4e-11, worst lambda_min +0.0e+00
+L''=0 control p=0.8: max |R| 0.0e+00, purities [1.0, 1.0, 1.0, 1.0, 1.0]
+L''=0 control p=0.5: max |R| 0.0e+00, purities [1.0, 1.0, 1.0, 1.0, 1.0]
+Saved plots -> ['C:\\Users\\nzier\\Lindbladian_steady_states\\experiments\\results\\drift_circuit_exact_finite_pbc_RvsN.png', 'C:\\Users\\nzier\\Lindbladian_steady_states\\experiments\\results\\drift_circuit_exact_finite_pbc_profiles.png']

@@ -9,6 +9,12 @@ __pycache__/
 .pytest_cache/
 .ruff_cache/
 
+# Jupyter checkpoints (the paper notebook itself IS tracked)
+.ipynb_checkpoints/
+
+# Internal working notes, not part of the published deposit
+CLAUDE.md
+
 # NOTE: experiments/results/ is deliberately NOT ignored. The pickles are the
 # study output, and results/_cache/ holds one pickle per completed TEBD run --
 # committing it means a fresh clone reuses ~4 h of finished compute instead of

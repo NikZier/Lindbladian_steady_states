@@ -56,3 +56,46 @@ def test_block_apply_matches_sparse_apply():
     rng = np.random.default_rng(1)
     rho = rng.standard_normal((Lv.n, Lv.n)) + 1j * rng.standard_normal((Lv.n, Lv.n))
     assert np.allclose(Lv.apply(rho), Lv.apply_sparse(rho), atol=1e-12)
+
+
+@pytest.mark.parametrize("N", [4, 6])
+@pytest.mark.parametrize("seed", [1, 2])
+def test_periodic_matches_dense_ring_solve(N, seed):
+    terms = _terms(seed)
+    ref = exact.sector_steady_state([], [], terms, [], N, periodic=True)["rho"]
+    Lv = sector_solver.SectorLiouvillian(terms, N, periodic=True)
+    sol = Lv.steady_state()
+    assert np.linalg.norm(Lv.apply(sol["rho"]) - Lv.apply_sparse(sol["rho"])) < 1e-12
+    full = sector_solver.embed_sector(sol["rho"], Lv.configs, N)
+    assert np.linalg.norm(full - ref) < 1e-9
+    assert sol["residual"] < 1e-9
+    # and it is genuinely a different state from the open chain's
+    open_ref = exact.sector_steady_state([], [], terms, [], N)["rho"]
+    assert np.linalg.norm(open_ref - ref) > 1e-3
+
+
+def test_periodic_steady_state_is_translation_invariant():
+    N = 6
+    Lv = sector_solver.SectorLiouvillian(_terms(3), N, periodic=True)
+    rho = Lv.steady_state()["rho"]
+    # cyclic shift by one site: bit at site k moves to site k+1
+    pos = np.empty(2**N, dtype=np.int64)
+    pos[Lv.configs] = np.arange(len(Lv.configs))
+    shifted = ((Lv.configs >> 1) | ((Lv.configs & 1) << (N - 1)))
+    pi = pos[shifted]
+    assert np.linalg.norm(rho[np.ix_(pi, pi)] - rho) < 1e-9
+    R = [sector_solver.renyi2_xx(rho, Lv.configs, N, i, (i + 2) % N) for i in range(N)]
+    assert np.ptp(R) < 1e-9 * max(abs(r) for r in R)
+
+
+def test_wrap_bond_embedding_matches_translated_bond():
+    rng = np.random.default_rng(0)
+    op = rng.normal(size=(4, 4))
+    N = 5
+    # T|s_0..s_{N-1}> = |s_{N-1} s_0 .. s_{N-2}> maps bond (N-2, N-1) onto (N-1, 0)
+    T = np.zeros((2**N, 2**N))
+    for k in range(2**N):
+        T[(k >> 1) | ((k & 1) << (N - 1)), k] = 1
+    from lindblad_mps import vectorize
+    expected = T @ vectorize.embed_bond_operator(op, N - 2, N, 2) @ T.T
+    assert np.allclose(exact.embed_wrap_bond_operator(op, N), expected)

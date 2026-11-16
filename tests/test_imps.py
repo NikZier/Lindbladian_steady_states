@@ -549,7 +549,7 @@ class TestArpackDeterminism:
 class TestHamiltonianEvolutionInfinite:
     """evolve_infinite driven by a HAMILTONIAN, against an exact analytic answer.
 
-    Until the Hamiltonian-perturbation study (experiments/imps_ham_eps_grid.py)
+    Until the Hamiltonian-perturbation study (experiments/model3_hamiltonian/imps_ham_eps_grid.py)
     every iTEBD call in this repo passed H2_terms=[], so the infinite driver had
     never been run with a Hamiltonian at all. A finite-chain cross-check is not
     available for this: the Renyi-2 correlator's denominator Tr[rho^dag rho] is

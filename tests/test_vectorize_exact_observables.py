@@ -233,7 +233,7 @@ class TestHamiltonianBranchOfTheBondGate:
     """bond_gate's Hamiltonian branch, which every H-perturbation run depends on.
 
     Every production call in this repo passed H2_terms=[] until the Hamiltonian
-    perturbation study (experiments/imps_ham_eps_grid.py), so the H branch --
+    perturbation study (experiments/model3_hamiltonian/imps_ham_eps_grid.py), so the H branch --
     the -i(H (x) I - I (x) H^T) term in liouvillian_generator, plus the
     local-vec reordering applied on top of it -- carried no direct coverage of
     its own. A sign or transpose error there would not crash; it would quietly

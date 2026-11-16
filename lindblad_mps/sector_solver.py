@@ -41,7 +41,8 @@ matvec.
 
 Input/Output conventions follow exact.py: basis index = integer whose most
 significant of N bits is site 0; bond operators act on (i, i+1) with local
-index 2*left + right.
+index 2*left + right. With periodic=True the ring adds the bond (N-1, 0),
+left = site N-1, so a rightward drift continues around the ring.
 """
 
 import numpy as np
@@ -88,6 +89,42 @@ def restricted_bond_operator(
     return restricted.tocsr()
 
 
+def restricted_pair_operator(
+    op: np.ndarray, a: int, b: int, N: int, configs: np.ndarray
+) -> sp.csr_matrix:
+    """A (4, 4) operator on the ordered site pair (a, b), restricted to a sector.
+
+    Same as restricted_bond_operator but for any pair -- used for the wrap
+    bond (N-1, 0) of a ring, which is not a contiguous Kronecker factor.
+    Local index is 2 * bit_a + bit_b.
+
+    Input: op, (4, 4) ndarray; a, b, distinct sites; N; configs.
+    Output: (n, n) CSR matrix, n = len(configs).
+    """
+    sa, sb = N - 1 - a, N - 1 - b
+    pos = np.full(2**N, -1, dtype=np.int64)
+    pos[configs] = np.arange(len(configs))
+    local = 2 * ((configs >> sa) & 1) + ((configs >> sb) & 1)
+    rest = configs & ~((1 << sa) | (1 << sb))
+    rows, cols, vals = [], [], []
+    for t in range(4):
+        for s in range(4):
+            if op[t, s] == 0:
+                continue
+            src = np.flatnonzero(local == s)
+            dst = rest[src] | ((t >> 1) << sa) | ((t & 1) << sb)
+            tgt = pos[dst]
+            assert np.all(tgt >= 0), "pair operator leaks out of the parity sector"
+            rows.append(tgt)
+            cols.append(src)
+            vals.append(np.full(len(src), op[t, s], dtype=complex))
+    n = len(configs)
+    if not rows:
+        return sp.csr_matrix((n, n), dtype=complex)
+    return sp.csr_matrix((np.concatenate(vals), (np.concatenate(rows), np.concatenate(cols))),
+                         shape=(n, n))
+
+
 def is_classical_jump(op: np.ndarray, tol: float = 1e-14) -> bool:
     """Whether op = c |f><i| for basis states f != i (one off-diagonal entry)."""
     nz = np.argwhere(np.abs(op) > tol)
@@ -95,18 +132,24 @@ def is_classical_jump(op: np.ndarray, tol: float = 1e-14) -> bool:
 
 
 class SectorLiouvillian:
-    """Matrix-free Lindblad generator on one parity sector of an open chain.
+    """Matrix-free Lindblad generator on one parity sector of an open chain or ring.
 
     Input (constructor):
         L2_terms: list of (bond jump operator (4, 4), rate), each applied on
-            every bond (i, i+1), i = 0..N-2.
+            every bond (i, i+1), i = 0..N-2, plus (N-1, 0) if periodic.
         N: number of sites.
         charge: sector parity (+1 or -1).
         H2_terms: optional list of (bond Hamiltonian (4, 4), coefficient).
+        periodic: add the wrap bond (N-1, 0); needs N >= 3.
     """
 
-    def __init__(self, L2_terms, N: int, charge: int = 1, H2_terms=()):
+    def __init__(self, L2_terms, N: int, charge: int = 1, H2_terms=(),
+                 periodic: bool = False):
+        if periodic and N < 3:
+            raise ValueError("a ring needs N >= 3")
         self.N = N
+        self.periodic = periodic
+        self.bonds = [(i, i + 1) for i in range(N - 1)] + ([(N - 1, 0)] if periodic else [])
         self.charge = charge
         self.configs = sector_configs(N, charge)
         self.n = len(self.configs)
@@ -114,15 +157,15 @@ class SectorLiouvillian:
         n = self.n
         H = sp.csr_matrix((n, n), dtype=complex)
         for op, c in H2_terms:
-            for i in range(N - 1):
-                H = H + c * restricted_bond_operator(op, i, N, self.configs)
+            for a, b in self.bonds:
+                H = H + c * self._bond(op, a, b)
 
         self.jumps = []          # (L, L^dag) pairs, rates folded in
         self.classical = []      # (f_idx, i_idx, rate) arrays, for the preconditioner
         K = sp.csr_matrix((n, n), dtype=complex)
         for op, rate in L2_terms:
-            for i in range(N - 1):
-                L = np.sqrt(rate) * restricted_bond_operator(op, i, N, self.configs)
+            for a, b in self.bonds:
+                L = np.sqrt(rate) * self._bond(op, a, b)
                 L.eliminate_zeros()
                 self.jumps.append((L, L.conj().T.tocsr()))
                 K = K + (L.conj().T @ L)
@@ -148,11 +191,19 @@ class SectorLiouvillian:
         self.G = vectorize.liouvillian_generator(
             [(op, c) for op, c in H2_terms], list(L2_terms), d=4)
         self.pos = []
-        for b in range(N - 1):
-            bond_bits = (self.configs >> (N - 2 - b)) & 0b11
+        # The wrap bond's bits are sites N-1 and 0; with both fixed, sorting by
+        # value still sorts by sites 1..N-2, so the block alignment holds.
+        for a, b in self.bonds:
+            bond_bits = (2 * ((self.configs >> (N - 1 - a)) & 1)
+                         + ((self.configs >> (N - 1 - b)) & 1))
             self.pos.append([np.flatnonzero(bond_bits == st) for st in range(4)])
         m = self.n // 4
         assert all(len(p) == m for ps in self.pos for p in ps)
+
+    def _bond(self, op, a, b):
+        if b == a + 1:
+            return restricted_bond_operator(op, a, self.N, self.configs)
+        return restricted_pair_operator(op, a, b, self.N, self.configs)
 
     # -- generator --------------------------------------------------------
     def apply(self, rho: np.ndarray) -> np.ndarray:
